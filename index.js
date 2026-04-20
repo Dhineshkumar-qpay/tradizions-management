@@ -12,6 +12,8 @@ import CategoryRouter from "./src/admin/routes/category_routes.js";
 import ProductGiftRouter from "./src/admin/routes/product_gift_routes.js";
 
 import AuthRouter from "./src/users/routes/authRoutes.js";
+import CartRouter from "./src/users/routes/cart_routes.js";
+import ProductCategoryRouter from "./src/users/routes/home_routes.js";
 
 const app = express();
 
@@ -29,6 +31,8 @@ app.use("/api", ProductGiftRouter);
 
 /* User Routes */
 app.use("/api", AuthRouter);
+app.use("/api", CartRouter);
+app.use("/api", ProductCategoryRouter);
 
 app.use(errorMiddleware);
 

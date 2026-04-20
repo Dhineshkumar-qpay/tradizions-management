@@ -10,6 +10,7 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 import * as fs from "fs";
 import { sequelize } from "../../../connection.js";
 import { BusinessModel } from "../../model/business_model.js";
+import { CartModel } from "../../model/cart_model.js";
 
 export const addProductImage = asyncHandler(async (req, res) => {
   let file;
@@ -183,9 +184,6 @@ export const updateProduct = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, "Product updated successfully"));
   } catch (error) {
-    if (file && file.path && fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
-    }
     throw error;
   }
 });
@@ -204,11 +202,13 @@ export const deleteProduct = asyncHandler(async (req, res) => {
       },
     });
 
-    if (product === 0) throw new ApiError(404, "Product not found");
+    if (product === 0) {
+      throw new ApiError(404, "Product not found");
+    }
 
     return res
       .status(200)
-      .json(new ApiResponse(200, "Product deleted sucessfully"));
+      .json(new ApiResponse(200, "Product  deleted successfully"));
   } catch (error) {
     throw error;
   }
