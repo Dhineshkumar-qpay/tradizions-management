@@ -353,7 +353,7 @@ export const addAddressInfo = asyncHandler(async (req, res) => {
     if (!req.body.latitude || !req.body.longitude)
       throw new ApiError(400, "Latitude and Longitude are required");
 
-    address = await BusinessAddressModel.create({
+    address = await AddressModel.create({
       addressline: addressline.trim(),
       landmark: landmark?.trim(),
       city: city.trim(),

@@ -10,10 +10,12 @@ import BusinessRouter from "./src/admin/routes/business_routes.js";
 import StateDistrictRouter from "./src/admin/routes/state_district_routes.js";
 import CategoryRouter from "./src/admin/routes/category_routes.js";
 import ProductGiftRouter from "./src/admin/routes/product_gift_routes.js";
+import BannerRouter from "./src/admin/routes/banner_routes.js";
 
 import AuthRouter from "./src/users/routes/authRoutes.js";
 import CartRouter from "./src/users/routes/cart_routes.js";
 import ProductCategoryRouter from "./src/users/routes/home_routes.js";
+import AddressRouter from "./src/users/routes/address_routes.js";
 
 const app = express();
 
@@ -28,11 +30,13 @@ app.use("/api", StateDistrictRouter);
 app.use("/api", BusinessRouter);
 app.use("/api", CategoryRouter);
 app.use("/api", ProductGiftRouter);
+app.use("/api", BannerRouter);
 
 /* User Routes */
 app.use("/api", AuthRouter);
 app.use("/api", CartRouter);
 app.use("/api", ProductCategoryRouter);
+app.use("/api", AddressRouter);
 
 app.use(errorMiddleware);
 

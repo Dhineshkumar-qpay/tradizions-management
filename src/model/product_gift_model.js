@@ -2,8 +2,9 @@ import { Model } from "sequelize";
 import { sequelize } from "../../connection.js";
 import { DataTypes } from "sequelize";
 import { BusinessModel } from "./business_model.js";
+import { AuthModel } from "./auth_model.js";
 
-class ProductModel extends Model {}
+class ProductModel extends Model { }
 
 ProductModel.init(
   {
@@ -77,7 +78,7 @@ ProductModel.init(
   },
 );
 
-class ProductImagesModel extends Model {}
+class ProductImagesModel extends Model { }
 
 ProductImagesModel.init(
   {
@@ -127,8 +128,45 @@ ProductImagesModel.init(
   },
 );
 
+class ProductReviewModel extends Model { }
 
-class GiftModel extends Model {}
+ProductReviewModel.init(
+  {
+    reviewid: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    productid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: ProductModel,
+        key: "productid",
+      },
+    },
+    rating: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0.0,
+    },
+    review: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    userid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+  },
+  {
+    sequelize: sequelize,
+    tableName: "productreviews",
+    modelName: "ProductReviewModel",
+    timestamps: false,
+  },
+);
+
+class GiftModel extends Model { }
 
 GiftModel.init(
   {
@@ -186,8 +224,7 @@ GiftModel.init(
   },
 );
 
-export {
-  ProductModel,
-  ProductImagesModel,
-  GiftModel,
-};
+export { ProductModel, ProductImagesModel, ProductReviewModel, GiftModel };
+
+ProductReviewModel.belongsTo(AuthModel, { foreignKey: "userid", as: "user" });
+AuthModel.hasMany(ProductReviewModel, { foreignKey: "userid" });

@@ -6,6 +6,7 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import { current } from "../../../config/config.js";
 import otpGenerator from "otp-generator";
 import jwt from "jsonwebtoken";
+import { where } from "sequelize";
 
 export const sendOTP = asyncHandler(async (req, res) => {
   const email = req.body?.email?.trim().toLowerCase();
@@ -34,7 +35,7 @@ export const sendOTP = asyncHandler(async (req, res) => {
       email,
       otp: parseInt(otp),
       otp_expires_at: otpExpiresAt,
-      role:"user"
+      role: "user",
     });
   }
 
@@ -74,7 +75,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
   await user.save();
 
   const token = jwt.sign(
-    { userid: user.userid, role:  user.role },
+    { userid: user.userid, role: user.role },
     current.jwtSecret,
     { expiresIn: "10d" },
   );
@@ -91,6 +92,28 @@ export const verifyOTP = asyncHandler(async (req, res) => {
   );
 });
 
+export const updateName = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+    const { firstname, lastname } = req.body;
+
+    const userUpdate = await AuthModel.update(
+      {
+        username: `${firstname} ${lastname}`,
+      },
+      {
+        where: { userid: userid },
+      },
+    );
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Name updated successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
 export const getProfile = asyncHandler(async (req, res) => {
   const userid = req.user?.userid;
 
@@ -99,7 +122,9 @@ export const getProfile = asyncHandler(async (req, res) => {
   }
 
   const user = await AuthModel.findByPk(userid, {
-    attributes: { exclude: ["otp", "otp_expires_at"] },
+    attributes: {
+      exclude: ["otp", "otp_expires_at", "createdAt", "updatedAt", "role"],
+    },
   });
 
   if (!user) {
@@ -139,4 +164,3 @@ export const updateProfile = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, "Profile updated successfully"));
 });
-

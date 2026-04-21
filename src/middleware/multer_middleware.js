@@ -35,9 +35,13 @@ const storage = multer.diskStorage({
       case "productimage":
         uploadPath = "./uploads/products/";
         break;
-        
+
       case "giftimage":
         uploadPath = "./uploads/gifts/";
+        break;
+
+      case "bannerimage":
+        uploadPath = "./uploads/banner/";
         break;
 
       default:
