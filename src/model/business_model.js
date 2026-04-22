@@ -23,6 +23,10 @@ BusinessModel.init(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    userid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
     sequelize: sequelize,
@@ -315,5 +319,5 @@ export {
   BusinessInfoModel,
   BusinessAddressModel,
   KYCModel,
-  BusinessBankModel
+  BusinessBankModel,
 };

@@ -1,7 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../../connection.js";
 
-class AuthModel extends Model {}
+class AuthModel extends Model { }
 
 AuthModel.init(
   {
@@ -63,16 +63,6 @@ AuthModel.init(
     tableName: "users",
     modelName: "AuthModel",
     timestamps: true,
-    indexes: [
-      {
-        unique: true,
-        fields: ["email"],
-      },
-      {
-        unique: true,
-        fields: ["phone"],
-      },
-    ],
   },
 );
 

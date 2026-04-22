@@ -3,6 +3,7 @@ import {
   ProductModel,
   ProductImagesModel,
   GiftModel,
+  ProductReviewModel,
 } from "../../model/product_gift_model.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
@@ -112,9 +113,12 @@ export const addProduct = asyncHandler(async (req, res) => {
       specs: parsedSpecs,
     });
 
-    return res
-      .status(201)
-      .json(new ApiResponse(201, "Product added successfully"));
+    return res.status(201).json(
+      new ApiResponse(201, {
+        message: "Product added successfully",
+        productid: product.productid,
+      }),
+    );
   } catch (error) {
     throw error;
   }
@@ -180,26 +184,29 @@ export const updateProduct = asyncHandler(async (req, res) => {
       specs: parsedSpecs !== undefined ? parsedSpecs : existingProduct.specs,
     });
 
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Product updated successfully"));
+    return res.status(200).json(
+      new ApiResponse(200, {
+        message: "Product updated successfully",
+        productid: existingProduct.productid,
+      }),
+    );
   } catch (error) {
     throw error;
   }
 });
 
 export const deleteProduct = asyncHandler(async (req, res) => {
-  const { bid, productid } = req.body;
-
   try {
+    const { bid, productid } = req.body;
+
     if (!bid) throw new ApiError(400, "Bid is required");
     if (!productid) throw new ApiError(400, "Product id is required");
 
+    await ProductImagesModel.destroy({ where: { productid } });
+    await ProductReviewModel.destroy({ where: { productid } });
+
     const product = await ProductModel.destroy({
-      where: {
-        bid: bid,
-        productid: productid,
-      },
+      where: { bid, productid },
     });
 
     if (product === 0) {
@@ -208,7 +215,7 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 
     return res
       .status(200)
-      .json(new ApiResponse(200, "Product  deleted successfully"));
+      .json(new ApiResponse(200, "Product deleted successfully"));
   } catch (error) {
     throw error;
   }
@@ -486,6 +493,7 @@ export const editGift = asyncHandler(async (req, res) => {
     productlist,
     giftprice,
     giftsellingprice,
+    giftimage,
     stock,
     packingtype,
   } = req.body;
@@ -527,16 +535,10 @@ export const editGift = asyncHandler(async (req, res) => {
       packingtype: packingtype?.trim() || existingGift.packingtype,
     });
 
-    if (newImagePath && oldImage) {
-      const p = oldImage.startsWith("/") ? oldImage.slice(1) : oldImage;
-      if (fs.existsSync(p)) fs.unlinkSync(p);
-    }
-
-    return res.status(200).json(new ApiResponse(200, gift));
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Gift updated successfully"));
   } catch (error) {
-    if (file && file.path && fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
-    }
     throw error;
   }
 });
@@ -567,5 +569,13 @@ export const getGifts = asyncHandler(async (req, res) => {
     where: { bid },
   });
 
-  return res.status(200).json(new ApiResponse(200, gifts));
+  const updatedgifts = gifts.map((gift) => {
+    const data = gift.toJSON();
+    return {
+      ...data,
+      productlist: data.productlist ? JSON.parse(data.productlist) : [],
+    };
+  });
+
+  return res.status(200).json(new ApiResponse(200, updatedgifts));
 });

@@ -1,6 +1,8 @@
+import { Json } from "sequelize/lib/utils";
 import { AuthModel } from "../../model/auth_model.js";
 import { BannerModel } from "../../model/banner_model.js";
 import { CategoryModel } from "../../model/category_model.js";
+import { FavouriteProductModel } from "../../model/favourite_model.js";
 import {
   GiftModel,
   ProductImagesModel,
@@ -13,6 +15,7 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 
 export const getAllProducts = asyncHandler(async (req, res) => {
   try {
+    const userid = req.user?.userid;
     let { page = 1 } = req.body;
 
     const limit = 30;
@@ -46,9 +49,14 @@ export const getAllProducts = asyncHandler(async (req, res) => {
           ? (totalRating / reviews.length).toFixed(1)
           : "0.0";
 
+        const isFavourite = await FavouriteProductModel.findOne({
+          where: { userid, productid: productData.productid },
+        });
+
         return {
           ...productData,
           averagerating: avgRating,
+          isfavourite: isFavourite ? true : false,
         };
       }),
     );
@@ -72,24 +80,29 @@ export const getProductDetail = asyncHandler(async (req, res) => {
 
   if (!productid) throw new ApiError(400, "productid is required");
 
-  const [productDetail, productImages, productReviews] = await Promise.all([
-    ProductModel.findByPk(productid),
+  const userid = req.user?.userid;
+  const [productDetail, productImages, productReviews, isFavourite] =
+    await Promise.all([
+      ProductModel.findByPk(productid),
 
-    ProductImagesModel.findOne({
-      where: { productid },
-    }),
+      ProductImagesModel.findOne({
+        where: { productid },
+      }),
 
-    ProductReviewModel.findAll({
-      where: { productid },
-      include: [
-        {
-          model: AuthModel,
-          as: "user",
-          attributes: ["username"],
-        },
-      ],
-    }),
-  ]);
+      ProductReviewModel.findAll({
+        where: { productid },
+        include: [
+          {
+            model: AuthModel,
+            as: "user",
+            attributes: ["username"],
+          },
+        ],
+      }),
+      FavouriteProductModel.findOne({
+        where: { userid, productid },
+      }),
+    ]);
 
   if (!productDetail) throw new ApiError(400, "product not found");
 
@@ -109,6 +122,7 @@ export const getProductDetail = asyncHandler(async (req, res) => {
     image2: productImages?.image2 ?? null,
     image3: productImages?.image3 ?? null,
     image4: productImages?.image4 ?? null,
+    isfavourite: isFavourite ? true : false,
   };
 
   const updatedProductReviews = productReviews.map((review) => {
@@ -252,7 +266,24 @@ export const getProductsByCategory = asyncHandler(async (req, res) => {
       limit,
       offset,
       order: [["createdAt", "DESC"]],
+      attributes: {
+        exclude: ["specs", "createdAt", "updatedAt"],
+      },
     });
+
+    const userid = req.user?.userid;
+    const updatedProducts = await Promise.all(
+      rows.map(async (product) => {
+        const productData = product.toJSON();
+        const isFavourite = await FavouriteProductModel.findOne({
+          where: { userid, productid: productData.productid },
+        });
+        return {
+          ...productData,
+          isfavourite: isFavourite ? true : false,
+        };
+      }),
+    );
 
     return res.status(200).json(
       new ApiResponse(200, {
@@ -260,14 +291,13 @@ export const getProductsByCategory = asyncHandler(async (req, res) => {
         currentPage: page,
         totalProducts: count,
         hasMore: page * limit < count,
-        products: rows,
+        products: updatedProducts,
       }),
     );
   } catch (error) {
     throw error;
   }
 });
-
 
 // --------------------------- Banners ---------------------------
 
@@ -285,14 +315,3 @@ export const getAllBanners = asyncHandler(async (req, res) => {
     throw error;
   }
 });
-
-// --------------------------- Addresss ---------------------------
-
-
-export const addaddress=asyncHandler(async(req,res)=>{
-  try {
-    
-  } catch (error) {
-    throw error;
-  }
-})

@@ -11,18 +11,18 @@ import { upload } from "../../middleware/multer_middleware.js";
 const router = express.Router();
 
 router.post(
-    "/bsuiness/addcategory",
+    "/category/addcategory",
     verifyToken,
     upload.single("categoryimage"),
     addCategory,
 );
 router.post(
-    "/bsuiness/updatecategory",
+    "/category/updatecategory",
     verifyToken,
     upload.single("categoryimage"),
     updateCategory,
 );
-router.post("/bsuiness/deletecategory", verifyToken, deleteCategory);
-router.post("/bsuiness/getallcategory", verifyToken, getAllCategories);
+router.post("/category/deletecategory", verifyToken, deleteCategory);
+router.post("/category/getallcategory", verifyToken, getAllCategories);
 
 export default router;

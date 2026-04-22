@@ -11,75 +11,174 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import fs from "fs";
+import { sequelize } from "../../../connection.js";
+import { GiftModel, ProductModel } from "../../model/product_gift_model.js";
 
 export const addBusiness = asyncHandler(async (req, res) => {
-  const { businessname, description } = req.body;
+  try {
+    const userid = req.user?.userid;
+    const { businessname, description } = req.body;
 
-  if (!businessname?.trim() || !description?.trim()) {
-    throw new ApiError(400, "Business name and description are required");
+    if (!businessname?.trim() || !description?.trim()) {
+      throw new ApiError(400, "Business name and description are required");
+    }
+
+    const business = await BusinessModel.create({
+      businessname: businessname.trim(),
+      description: description.trim(),
+      userid: userid,
+    });
+
+    if (!business) {
+      throw new ApiError(500, "Business creation failed");
+    }
+
+    return res
+      .status(201)
+      .json(new ApiResponse(200, "Business added successfully"));
+  } catch (error) {
+    throw error;
   }
-
-  const business = await BusinessModel.create({
-    businessname: businessname.trim(),
-    description: description.trim(),
-  });
-
-  if (!business) {
-    throw new ApiError(500, "Business creation failed");
-  }
-
-  return res
-    .status(201)
-    .json(new ApiResponse(200, "Business added successfully"));
 });
 
 export const deleteBusiness = asyncHandler(async (req, res) => {
-  const { bid } = req.body;
+  try {
+    const userid = req.user?.userid;
+    const { bid } = req.body;
 
-  if (!bid) {
-    throw new ApiError(400, "Business ID is required");
+    if (!bid) {
+      throw new ApiError(400, "Business ID is required");
+    }
+
+    const business = await BusinessModel.findOne({
+      where: {
+        bid,
+        userid,
+      },
+    });
+
+    if (!business) {
+      throw new ApiError(404, "Business not found");
+    }
+    if (business.verified) {
+      throw new ApiError(400, "Verified business cannot be deleted");
+    }
+
+    await business.destroy();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Business deleted successfully"));
+  } catch (error) {
+    throw error;
   }
-
-  const business = await BusinessModel.findByPk(bid);
-
-  if (!business) {
-    throw new ApiError(404, "Business not found");
-  }
-  if (business.verified) {
-    throw new ApiError(400, "Verified business cannot be deleted");
-  }
-
-  await business.destroy();
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, "Business deleted successfully"));
 });
 
 export const getAllBusiness = asyncHandler(async (req, res) => {
-  const businesses = await BusinessModel.findAll();
-  return res.status(200).json(new ApiResponse(200, businesses || []));
+  try {
+    const businesses = await BusinessModel.findAll({
+      where: {
+        userid: req.user?.userid,
+      },
+      attributes: {
+        exclude: ["createdAt", "updatedAt"],
+      },
+    });
+    return res.status(200).json(new ApiResponse(200, businesses || []));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getBusinessVerifiedPercentage = asyncHandler(async (req, res) => {
+  const { bid } = req.body;
+
+  if (!bid) throw new ApiError(400, "Bid is required");
+
+  const [
+    basicInfo,
+    shopInfo,
+    addressInfo,
+    bankinfo,
+    inventoryinfo,
+    giftcardinfo,
+  ] = await Promise.all([
+    BasicInfoModel.findOne({ where: { bid } }),
+    BusinessInfoModel.findOne({ where: { bid } }),
+    BusinessAddressModel.findOne({ where: { bid } }),
+    BusinessBankModel.findOne({ where: { bid } }),
+    ProductModel.findOne({ where: { bid } }),
+    GiftModel.findOne({ where: { bid } }),
+  ]);
+
+  const status = {
+    basicinfo: !!basicInfo,
+    shopInfo: !!shopInfo,
+    addressInfo: !!addressInfo,
+    bankinfo: !!bankinfo,
+    inventoryinfo: !!inventoryinfo,
+    giftcardinfo: !!giftcardinfo,
+  };
+
+  const totalSections = Object.keys(status).length;
+
+  const completedSections = Object.values(status).filter(
+    (value) => value === true,
+  ).length;
+
+  const percentage = Math.round((completedSections / totalSections) * 100);
+
+  const verified = percentage === 100;
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      ...status,
+      percentage,
+      verified,
+    }),
+  );
+});
+/* ------------------------- Admin business API's -------------------------  */
+
+export const getTotalBusiness = asyncHandler(async (req, res) => {
+  try {
+    const totalBusiness = await BusinessModel.findAll({
+      attributes: {
+        exclude: ["createdAt", "updatedAt"],
+      },
+    });
+    return res.status(200).json(new ApiResponse(200, totalBusiness));
+  } catch (error) {
+    throw error;
+  }
 });
 
 export const verifyBusiness = asyncHandler(async (req, res) => {
-  const { bid, verified } = req.body;
+  try {
+    const { bid, verified } = req.body;
 
-  if (!bid || typeof verified !== "boolean") {
-    throw new ApiError(400, "Business ID and verified (boolean) are required");
+    if (!bid || typeof verified !== "boolean") {
+      throw new ApiError(
+        400,
+        "Business ID and verified (boolean) are required",
+      );
+    }
+
+    const business = await BusinessModel.findByPk(bid);
+
+    if (!business) {
+      throw new ApiError(404, "Business not found");
+    }
+
+    business.verified = verified;
+    await business.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Business updated successfully"));
+  } catch (error) {
+    throw error;
   }
-
-  const business = await BusinessModel.findByPk(bid);
-
-  if (!business) {
-    throw new ApiError(404, "Business not found");
-  }
-
-  business.verified = verified;
-  await business.save();
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, "Business updated successfully"));
 });
 
 /* ------------------ Business Onboard ------------------ */
@@ -165,9 +264,7 @@ export const getBasicInfo = asyncHandler(async (req, res) => {
     },
   });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, businessInfo ?? "No data found"));
+  return res.status(200).json(new ApiResponse(200, businessInfo ?? null));
 });
 
 /* ------------------ Business Info ------------------ */
@@ -283,9 +380,7 @@ export const getBusinessInfo = asyncHandler(async (req, res) => {
       bid,
     },
   });
-  return res
-    .status(200)
-    .json(new ApiResponse(200, busiessInfo ?? "No data found"));
+  return res.status(200).json(new ApiResponse(200, busiessInfo ?? null));
 });
 
 /* ------------------ Address Info ------------------ */
@@ -353,7 +448,7 @@ export const addAddressInfo = asyncHandler(async (req, res) => {
     if (!req.body.latitude || !req.body.longitude)
       throw new ApiError(400, "Latitude and Longitude are required");
 
-    address = await AddressModel.create({
+    address = await BusinessAddressModel.create({
       addressline: addressline.trim(),
       landmark: landmark?.trim(),
       city: city.trim(),
@@ -384,9 +479,7 @@ export const getAddressInfo = asyncHandler(async (req, res) => {
     where: { bid },
   });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, addressData ?? "No data found"));
+  return res.status(200).json(new ApiResponse(200, addressData ?? null));
 });
 
 /* ------------------ KYC Info ------------------ */
@@ -524,7 +617,7 @@ export const getKyc = asyncHandler(async (req, res) => {
       bid: bid,
     },
   });
-  return res.status(200).json(new ApiResponse(200, kycData ?? "No data found"));
+  return res.status(200).json(new ApiResponse(200, kycData ?? null));
 });
 
 /* ------------------ Bank Info ------------------ */
@@ -646,7 +739,5 @@ export const getBankInfo = asyncHandler(async (req, res) => {
     where: { bid },
   });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, bankData ?? "No data found"));
+  return res.status(200).json(new ApiResponse(200, bankData ?? null));
 });

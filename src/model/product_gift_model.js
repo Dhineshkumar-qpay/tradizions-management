@@ -4,7 +4,7 @@ import { DataTypes } from "sequelize";
 import { BusinessModel } from "./business_model.js";
 import { AuthModel } from "./auth_model.js";
 
-class ProductModel extends Model { }
+class ProductModel extends Model {}
 
 ProductModel.init(
   {
@@ -78,7 +78,7 @@ ProductModel.init(
   },
 );
 
-class ProductImagesModel extends Model { }
+class ProductImagesModel extends Model {}
 
 ProductImagesModel.init(
   {
@@ -128,7 +128,7 @@ ProductImagesModel.init(
   },
 );
 
-class ProductReviewModel extends Model { }
+class ProductReviewModel extends Model {}
 
 ProductReviewModel.init(
   {
@@ -166,7 +166,7 @@ ProductReviewModel.init(
   },
 );
 
-class GiftModel extends Model { }
+class GiftModel extends Model {}
 
 GiftModel.init(
   {
@@ -228,3 +228,21 @@ export { ProductModel, ProductImagesModel, ProductReviewModel, GiftModel };
 
 ProductReviewModel.belongsTo(AuthModel, { foreignKey: "userid", as: "user" });
 AuthModel.hasMany(ProductReviewModel, { foreignKey: "userid" });
+
+ProductModel.hasMany(ProductImagesModel, {
+  foreignKey: "productid",
+  onDelete: "CASCADE",
+});
+
+ProductImagesModel.belongsTo(ProductModel, {
+  foreignKey: "productid",
+});
+
+ProductModel.hasMany(ProductReviewModel, {
+  foreignKey: "productid",
+  onDelete: "CASCADE",
+});
+
+ProductReviewModel.belongsTo(ProductModel, {
+  foreignKey: "productid",
+});

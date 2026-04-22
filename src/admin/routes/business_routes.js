@@ -12,7 +12,9 @@ import {
   getBankInfo,
   getBasicInfo,
   getBusinessInfo,
+  getBusinessVerifiedPercentage,
   getKyc,
+  getTotalBusiness,
   updateKyc,
   verifyBusiness,
 } from "../controller/business_controllers.js";
@@ -21,7 +23,10 @@ import { upload } from "../../middleware/multer_middleware.js";
 
 const router = express.Router();
 
+router.post("/admin/businesses", verifyToken, getTotalBusiness);
+
 router.post("/business/addbusiness", verifyToken, addBusiness);
+router.post("/business/percentage", verifyToken, getBusinessVerifiedPercentage);
 router.post("/business/deletebusiness", verifyToken, deleteBusiness);
 router.post("/business/getallbusiness", verifyToken, getAllBusiness);
 router.post("/business/verify", verifyToken, adminOnly, verifyBusiness);

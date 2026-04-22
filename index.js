@@ -16,6 +16,7 @@ import AuthRouter from "./src/users/routes/authRoutes.js";
 import CartRouter from "./src/users/routes/cart_routes.js";
 import ProductCategoryRouter from "./src/users/routes/home_routes.js";
 import AddressRouter from "./src/users/routes/address_routes.js";
+import FavouriteRouter from "./src/users/routes/favourite_routes.js";
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use("/api", AuthRouter);
 app.use("/api", CartRouter);
 app.use("/api", ProductCategoryRouter);
 app.use("/api", AddressRouter);
+app.use("/api", FavouriteRouter);
 
 app.use(errorMiddleware);
 
