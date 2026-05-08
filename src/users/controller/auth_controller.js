@@ -62,7 +62,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
-  if (user.otp === null || user.otp !== otp) {
+  if (user.otp === null || `${user.otp}` !== `${otp}`) {
     throw new ApiError(400, "Invalid OTP");
   }
 

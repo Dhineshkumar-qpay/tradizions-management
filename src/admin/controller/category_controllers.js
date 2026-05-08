@@ -140,9 +140,14 @@ export const addSubcategory = asyncHandler(async (req, res) => {
 
     if (!existcategory) throw new ApiError(400, "Category does not exist");
 
+    const finalCategoryName = (categoryname || existcategory.categoryname || "").trim();
+    if (!finalCategoryName) {
+      throw new ApiError(400, "Category name is required");
+    }
+
     const subcategory = await SubCategoryModel.create({
       categoryid,
-      categoryname: categoryname.trim(),
+      categoryname: finalCategoryName,
       subcategoryname: subcategoryname.trim(),
     });
 

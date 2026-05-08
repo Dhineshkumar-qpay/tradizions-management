@@ -218,14 +218,27 @@ export const giftDetails = asyncHandler(async (req, res) => {
     where: { giftid },
   });
 
+  if (!gift) {
+    throw new ApiError(404, "Gift card not found");
+  }
+
+  let parsedProductList = gift.productlist;
+  if (typeof parsedProductList === "string") {
+    try {
+      parsedProductList = JSON.parse(parsedProductList);
+    } catch (e) {
+      parsedProductList = [];
+    }
+  }
+
   const updatedGiftData = {
     ...gift.toJSON(),
-    productlist: JSON.parse(gift.productlist) || [],
+    productlist: parsedProductList || [],
   };
 
   return res
     .status(200)
-    .json(new ApiResponse(200, updatedGiftData || "Gift not found"));
+    .json(new ApiResponse(200, updatedGiftData));
 });
 
 // --------------------------- Reviews ---------------------------

@@ -4,6 +4,11 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 
 export const addAddress = asyncHandler(async (req, res) => {
+  const userid = req.user?.userid;
+  if (!userid) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
   const { addressid } = req.body;
 
   let data;
@@ -12,7 +17,7 @@ export const addAddress = asyncHandler(async (req, res) => {
     data = await AddressModel.findOne({
       where: {
         addressid,
-        userid: req.user.userid,
+        userid,
       },
     });
 
@@ -29,7 +34,7 @@ export const addAddress = asyncHandler(async (req, res) => {
 
   data = await AddressModel.create({
     ...req.body,
-    userid: req.user.userid,
+    userid,
   });
 
   return res

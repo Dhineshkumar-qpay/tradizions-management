@@ -620,7 +620,7 @@ export const deleteGift = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, "Gift deleted successfully"));
 });
 
-export const getGifts = asyncHandler(async (req, res) => {
+export const getMerchantGifts = asyncHandler(async (req, res) => {
   const { bid } = req.body;
 
   if (!bid) throw new ApiError(400, "Bid is required");

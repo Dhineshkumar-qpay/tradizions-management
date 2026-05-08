@@ -4,7 +4,7 @@ import path from "path";
 import "dotenv/config";
 import { connectDB, sequelize } from "./connection.js";
 import { errorMiddleware } from "./src/middleware/error_middleware.js";
-import { mode } from "./config/config.js";
+import { mode, current } from "./config/config.js";
 import AdminAuthRouter from "./src/admin/routes/admin_auth_routes.js";
 import BusinessRouter from "./src/admin/routes/business_routes.js";
 import StateDistrictRouter from "./src/admin/routes/state_district_routes.js";

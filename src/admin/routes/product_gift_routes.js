@@ -10,7 +10,7 @@ import {
   addGift,
   editGift,
   deleteGift,
-  getGifts,
+  getMerchantGifts,
   addGiftImage,
   addProductImage,
 } from "../controller/product_gift_controller.js";
@@ -54,6 +54,6 @@ router.post(
 router.post("/business/addgift", verifyToken, addGift);
 router.post("/business/editgift", verifyToken, editGift);
 router.post("/business/deletegift", verifyToken, deleteGift);
-router.post("/business/getgifts", verifyToken, getGifts);
+router.post("/business/getgifts", verifyToken, getMerchantGifts);
 
 export default router;
