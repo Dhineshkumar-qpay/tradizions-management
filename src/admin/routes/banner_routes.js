@@ -1,5 +1,5 @@
 import express from "express";
-import { addBanner, deleteBanner } from "../controller/banner_controller.js";
+import { addBanner, deleteBanner, getAllBanners } from "../controller/banner_controller.js";
 import { verifyToken } from "../../middleware/auth_middleware.js";
 import { upload } from "../../middleware/multer_middleware.js";
 
@@ -12,5 +12,6 @@ router.post(
   addBanner,
 );
 router.post("/admin/delete-banner", verifyToken, deleteBanner);
+router.post("/admin/all-banners", getAllBanners);
 
 export default router;

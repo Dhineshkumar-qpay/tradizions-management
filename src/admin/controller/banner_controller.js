@@ -60,3 +60,17 @@ export const deleteBanner = asyncHandler(async (req, res) => {
     throw error;
   }
 });
+
+export const getAllBanners = asyncHandler(async (req, res) => {
+  try {
+    const banners = await BannerModel.findAll({
+      attributes: {
+        exclude: ["createdAt", "updatedAt"],
+      },
+    });
+
+    return res.status(200).json(new ApiResponse(200, banners));
+  } catch (error) {
+    throw error;
+  }
+});

@@ -11,6 +11,7 @@ import StateDistrictRouter from "./src/admin/routes/state_district_routes.js";
 import CategoryRouter from "./src/admin/routes/category_routes.js";
 import ProductGiftRouter from "./src/admin/routes/product_gift_routes.js";
 import BannerRouter from "./src/admin/routes/banner_routes.js";
+import HomeRouter from "./src/admin/routes/home_routes.js";
 
 import AuthRouter from "./src/users/routes/authRoutes.js";
 import CartRouter from "./src/users/routes/cart_routes.js";
@@ -26,6 +27,7 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use("/uploads", express.static("uploads"));
 
 /* Admin Routes */
+app.use("/api", HomeRouter);
 app.use("/api", AdminAuthRouter);
 app.use("/api", StateDistrictRouter);
 app.use("/api", BusinessRouter);

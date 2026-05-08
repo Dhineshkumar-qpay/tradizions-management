@@ -1,4 +1,5 @@
-import { CategoryModel } from "../../model/category_model.js";
+import { CategoryModel, SubCategoryModel } from "../../model/category_model.js";
+import { ProductModel } from "../../model/product_gift_model.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
@@ -109,5 +110,97 @@ export const getAllCategories = asyncHandler(async (req, res) => {
       exclude: ["createdAt", "updatedAt"],
     },
   });
-  return res.status(200).json(new ApiResponse(200, categories));
+
+  const updatedCategories = await Promise.all(
+    categories.map(async (category) => {
+      const products = await ProductModel.count({
+        where: { categoryid: category.categoryid },
+      });
+      return { ...category.toJSON(), products };
+    }),
+  );
+
+  return res.status(200).json(new ApiResponse(200, updatedCategories));
+});
+
+/* sub category controllers here */
+
+export const addSubcategory = asyncHandler(async (req, res) => {
+  try {
+    const { categoryid, categoryname, subcategoryname } = req.body;
+
+    if (!categoryid) {
+      throw new ApiError(400, "Category id is required");
+    }
+    if (!subcategoryname?.trim()) {
+      throw new ApiError(400, "Subcategory name is required");
+    }
+
+    const existcategory = await CategoryModel.findByPk(categoryid);
+
+    if (!existcategory) throw new ApiError(400, "Category does not exist");
+
+    const subcategory = await SubCategoryModel.create({
+      categoryid,
+      categoryname: categoryname.trim(),
+      subcategoryname: subcategoryname.trim(),
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "SubCategory added successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getAllSubcategories = asyncHandler(async (req, res) => {
+  try {
+    const { categoryid } = req.body;
+    const where = {};
+    if (categoryid) {
+      where.categoryid = categoryid;
+    }
+
+    const subcategories = await SubCategoryModel.findAll({
+      where,
+    });
+
+    return res.status(200).json(new ApiResponse(200, subcategories || []));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const deleteSubCategory = asyncHandler(async (req, res) => {
+  try {
+    const { categoryid, subcategoryid } = req.body;
+
+    if (!categoryid || !subcategoryid) {
+      throw new ApiError(400, "Category id and Subcategory id are required");
+    }
+
+    const subcategory = await SubCategoryModel.findOne({
+      where: {
+        categoryid,
+        subcategoryid,
+      },
+    });
+
+    if (!subcategory) {
+      throw new ApiError(404, "Subcategory not found");
+    }
+
+    await SubCategoryModel.destroy({
+      where: {
+        categoryid,
+        subcategoryid,
+      },
+    });
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Subcategory deleted successfully"));
+  } catch (error) {
+    throw error;
+  }
 });

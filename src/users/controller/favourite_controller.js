@@ -69,7 +69,7 @@ export const getFavourites = asyncHandler(async (req, res) => {
           model: ProductModel,
           as: "product",
           attributes: {
-            exclude: ["createdAt", "updatedAt", "specs"],
+            exclude: ["createdAt", "updatedAt"],
           },
         },
       ],

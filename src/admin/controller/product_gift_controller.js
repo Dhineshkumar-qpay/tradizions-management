@@ -55,6 +55,8 @@ export const addProduct = asyncHandler(async (req, res) => {
     productname,
     categoryid,
     categoryname,
+    subcategoryid,
+    subcategoryname,
     brandname,
     description,
     sellingprice,
@@ -63,7 +65,19 @@ export const addProduct = asyncHandler(async (req, res) => {
     unit,
     availablestock,
     productimage,
-    specs,
+    isFeatured,
+    isTrending,
+    isBestSeller,
+    isActive,
+    ingredients,
+    shelflife,
+    storageinfo,
+    calories,
+    protien,
+    fibre,
+    fat,
+    carbohydrates,
+    country,
   } = req.body;
 
   try {
@@ -77,6 +91,8 @@ export const addProduct = asyncHandler(async (req, res) => {
       !productname?.trim() ||
       !categoryid ||
       !categoryname?.trim() ||
+      !subcategoryid ||
+      !subcategoryname?.trim() ||
       !brandname?.trim() ||
       !description?.trim() ||
       price === undefined ||
@@ -88,21 +104,14 @@ export const addProduct = asyncHandler(async (req, res) => {
       throw new ApiError(400, "All fields are required");
     }
 
-    let parsedSpecs = null;
-    if (specs) {
-      try {
-        parsedSpecs = typeof specs === "string" ? JSON.parse(specs) : specs;
-      } catch (e) {
-        throw new ApiError(400, "Invalid specs format");
-      }
-    }
-
     const product = await ProductModel.create({
       bid,
       productimage,
       productname: productname.trim(),
       categoryid,
       categoryname: categoryname.trim(),
+      subcategoryid,
+      subcategoryname: subcategoryname.trim(),
       brandname: brandname.trim(),
       description: description.trim(),
       sellingprice,
@@ -110,15 +119,24 @@ export const addProduct = asyncHandler(async (req, res) => {
       weight,
       unit,
       availablestock,
-      specs: parsedSpecs,
+      isFeatured: isFeatured !== undefined ? isFeatured : false,
+      isTrending: isTrending !== undefined ? isTrending : true,
+      isBestSeller: isBestSeller !== undefined ? isBestSeller : true,
+      isActive: isActive !== undefined ? isActive : true,
+      ingredients: ingredients || null,
+      shelflife: shelflife || null,
+      storageinfo: storageinfo || null,
+      calories: calories !== undefined ? calories : 0.0,
+      protien: protien !== undefined ? protien : 0.0,
+      fibre: fibre !== undefined ? fibre : 0.0,
+      fat: fat !== undefined ? fat : 0.0,
+      carbohydrates: carbohydrates !== undefined ? carbohydrates : 0.0,
+      country: country || "India",
     });
 
-    return res.status(201).json(
-      new ApiResponse(201, {
-        message: "Product added successfully",
-        productid: product.productid,
-      }),
-    );
+    return res
+      .status(201)
+      .json(new ApiResponse(201, "Product added successfully"));
   } catch (error) {
     throw error;
   }
@@ -140,7 +158,19 @@ export const updateProduct = asyncHandler(async (req, res) => {
       unit,
       availablestock,
       productimage,
-      specs,
+      isFeatured,
+      isTrending,
+      isBestSeller,
+      isActive,
+      ingredients,
+      shelflife,
+      storageinfo,
+      calories,
+      protien,
+      fibre,
+      fat,
+      carbohydrates,
+      country,
     } = req.body;
 
     if (!productid) throw new ApiError(400, "Product id is required");
@@ -152,16 +182,8 @@ export const updateProduct = asyncHandler(async (req, res) => {
 
     if (!existingProduct) throw new ApiError(404, "Product not found");
 
-    let parsedSpecs;
-    if (specs !== undefined) {
-      try {
-        parsedSpecs = typeof specs === "string" ? JSON.parse(specs) : specs;
-      } catch (e) {
-        throw new ApiError(400, "Invalid specs format");
-      }
-    }
-
-    let finalImage = existingProduct.productimage;
+    let finalImage =
+      productimage !== undefined ? productimage : existingProduct.productimage;
 
     await existingProduct.update({
       productimage: finalImage,
@@ -181,7 +203,30 @@ export const updateProduct = asyncHandler(async (req, res) => {
         availablestock !== undefined
           ? availablestock
           : existingProduct.availablestock,
-      specs: parsedSpecs !== undefined ? parsedSpecs : existingProduct.specs,
+      isFeatured:
+        isFeatured !== undefined ? isFeatured : existingProduct.isFeatured,
+      isTrending:
+        isTrending !== undefined ? isTrending : existingProduct.isTrending,
+      isBestSeller:
+        isBestSeller !== undefined
+          ? isBestSeller
+          : existingProduct.isBestSeller,
+      isActive: isActive !== undefined ? isActive : existingProduct.isActive,
+      ingredients:
+        ingredients !== undefined ? ingredients : existingProduct.ingredients,
+      shelflife:
+        shelflife !== undefined ? shelflife : existingProduct.shelflife,
+      storageinfo:
+        storageinfo !== undefined ? storageinfo : existingProduct.storageinfo,
+      calories: calories !== undefined ? calories : existingProduct.calories,
+      protien: protien !== undefined ? protien : existingProduct.protien,
+      fibre: fibre !== undefined ? fibre : existingProduct.fibre,
+      fat: fat !== undefined ? fat : existingProduct.fat,
+      carbohydrates:
+        carbohydrates !== undefined
+          ? carbohydrates
+          : existingProduct.carbohydrates,
+      country: country !== undefined ? country : existingProduct.country,
     });
 
     return res.status(200).json(
@@ -260,7 +305,6 @@ export const getAllProducts = asyncHandler(async (req, res) => {
           image3: productImages?.image3 ?? null,
           image4: productImages?.image4 ?? null,
           discount,
-          specs: data.specs ? JSON.parse(data.specs) : [],
         };
       }),
     );
@@ -388,7 +432,7 @@ export const deleteProductImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, `${imagename} deleted successfully`));
 });
 
-// --------------------------- Gifts ---------------------------
+/// --------------------------- Gifts Functions ---------------------------///
 
 export const addGiftImage = asyncHandler(async (req, res) => {
   const { oldimage } = req.body;
@@ -430,6 +474,10 @@ export const addGift = asyncHandler(async (req, res) => {
     bid,
     giftname,
     giftdescription,
+    categoryid,
+    categoryname,
+    subcategoryid,
+    subcategoryname,
     productlist,
     giftprice,
     giftsellingprice,
@@ -443,6 +491,10 @@ export const addGift = asyncHandler(async (req, res) => {
     if (
       !giftname?.trim() ||
       !giftdescription?.trim() ||
+      !categoryid ||
+      !categoryname?.trim() ||
+      !subcategoryid ||
+      !subcategoryname?.trim() ||
       !productlist ||
       giftprice === undefined ||
       stock === undefined ||
@@ -453,7 +505,7 @@ export const addGift = asyncHandler(async (req, res) => {
     }
 
     let parsedProductList = productlist;
-    if (typeof productlist === "string") {
+    if (productlist && typeof productlist === "string") {
       try {
         parsedProductList = JSON.parse(productlist);
       } catch (e) {
@@ -465,10 +517,14 @@ export const addGift = asyncHandler(async (req, res) => {
       bid,
       giftname: giftname.trim(),
       giftimage,
+      categoryid,
+      categoryname: categoryname.trim(),
+      subcategoryid,
+      subcategoryname: subcategoryname.trim(),
       giftdescription: giftdescription.trim(),
       productlist: parsedProductList,
       giftprice,
-      giftsellingprice,
+      giftsellingprice: giftsellingprice !== undefined ? giftsellingprice : null,
       stock,
       packingtype: packingtype.trim(),
     });
@@ -477,9 +533,6 @@ export const addGift = asyncHandler(async (req, res) => {
       .status(201)
       .json(new ApiResponse(201, "Gift card added successfully"));
   } catch (error) {
-    if (file && file.path && fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
-    }
     throw error;
   }
 });
@@ -488,6 +541,10 @@ export const editGift = asyncHandler(async (req, res) => {
   const {
     giftid,
     bid,
+    categoryid,
+    categoryname,
+    subcategoryid,
+    subcategoryname,
     giftname,
     giftdescription,
     productlist,
@@ -497,7 +554,6 @@ export const editGift = asyncHandler(async (req, res) => {
     stock,
     packingtype,
   } = req.body;
-  const file = req.file;
 
   try {
     if (!giftid) throw new ApiError(400, "Gift id is required");
@@ -518,9 +574,13 @@ export const editGift = asyncHandler(async (req, res) => {
       }
     }
 
-    const gift = await existingGift.update({
+    await existingGift.update({
       giftname: giftname?.trim() || existingGift.giftname,
-      giftimage,
+      giftimage: giftimage !== undefined ? giftimage : existingGift.giftimage,
+      categoryid: categoryid || existingGift.categoryid,
+      categoryname: categoryname?.trim() || existingGift.categoryname,
+      subcategoryid: subcategoryid || existingGift.subcategoryid,
+      subcategoryname: subcategoryname?.trim() || existingGift.subcategoryname,
       giftdescription: giftdescription?.trim() || existingGift.giftdescription,
       productlist:
         parsedProductList !== undefined
@@ -571,9 +631,17 @@ export const getGifts = asyncHandler(async (req, res) => {
 
   const updatedgifts = gifts.map((gift) => {
     const data = gift.toJSON();
+    let parsedProductList = data.productlist;
+    if (typeof parsedProductList === "string") {
+      try {
+        parsedProductList = JSON.parse(parsedProductList);
+      } catch (e) {
+        parsedProductList = [];
+      }
+    }
     return {
       ...data,
-      productlist: data.productlist ? JSON.parse(data.productlist) : [],
+      productlist: parsedProductList || [],
     };
   });
 

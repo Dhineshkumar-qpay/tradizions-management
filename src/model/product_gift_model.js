@@ -37,6 +37,14 @@ ProductModel.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    subcategoryid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    subcategoryname: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     brandname: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -65,9 +73,57 @@ ProductModel.init(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    specs: {
-      type: DataTypes.JSON,
+    isFeatured: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    isTrending: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+    isBestSeller: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+    ingredients: {
+      type: DataTypes.STRING,
       allowNull: true,
+    },
+    shelflife: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    storageinfo: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    calories: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0.0,
+    },
+    protien: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0.0,
+    },
+    fibre: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0.0,
+    },
+    fat: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0.0,
+    },
+    carbohydrates: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0.0,
+    },
+    country: {
+      type: DataTypes.STRING,
+      defaultValue: "India",
     },
   },
   {
@@ -145,6 +201,25 @@ ProductReviewModel.init(
         key: "productid",
       },
     },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        isEmail: true,
+      },
+    },
+    status: {
+      type: DataTypes.ENUM("active", "inactive"),
+      defaultValue: "inactive",
+    },
     rating: {
       type: DataTypes.FLOAT,
       defaultValue: 0.0,
@@ -162,7 +237,7 @@ ProductReviewModel.init(
     sequelize: sequelize,
     tableName: "productreviews",
     modelName: "ProductReviewModel",
-    timestamps: false,
+    timestamps: true,
   },
 );
 
@@ -182,6 +257,22 @@ GiftModel.init(
         model: BusinessModel,
         key: "bid",
       },
+    },
+    categoryid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    categoryname: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    subcategoryid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    subcategoryname: {
+      type: DataTypes.STRING,
+      allowNull: false,
     },
     giftname: {
       type: DataTypes.STRING,
@@ -227,6 +318,7 @@ GiftModel.init(
 export { ProductModel, ProductImagesModel, ProductReviewModel, GiftModel };
 
 ProductReviewModel.belongsTo(AuthModel, { foreignKey: "userid", as: "user" });
+
 AuthModel.hasMany(ProductReviewModel, { foreignKey: "userid" });
 
 ProductModel.hasMany(ProductImagesModel, {
