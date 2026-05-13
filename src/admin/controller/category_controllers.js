@@ -25,8 +25,8 @@ export const addCategory = asyncHandler(async (req, res) => {
     });
 
     return res
-      .status(201)
-      .json(new ApiResponse(201, "Category added successfully", category));
+      .status(200)
+      .json(new ApiResponse(200, "Category added successfully", category));
   } catch (error) {
     if (file && file.path && fs.existsSync(file.path)) {
       fs.unlinkSync(file.path);

@@ -20,10 +20,7 @@ AddressModel.init(
         key: "userid",
       },
     },
-    addressas: {
-      type: DataTypes.ENUM("Home", "Office", "Other"),
-      defaultValue: "Home",
-    },
+
     addressline: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -69,10 +66,6 @@ AddressModel.init(
     },
     longitude: {
       type: DataTypes.FLOAT,
-      allowNull: false,
-    },
-    addresslabel: {
-      type: DataTypes.STRING,
       allowNull: false,
     },
   },

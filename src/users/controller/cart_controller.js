@@ -1,5 +1,5 @@
 import { CartModel } from "../../model/cart_model.js";
-import { ProductModel, GiftModel } from "../../model/product_gift_model.js";
+import { ProductModel } from "../../model/product_gift_model.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
@@ -24,9 +24,14 @@ export const addToCart = asyncHandler(async (req, res) => {
       if (!productid) {
         throw new ApiError(400, "Product ID is required");
       }
-      const product = await ProductModel.findOne({ where: { productid, bid } });
+      const product = await ProductModel.findOne({
+        where: { productid, bid, itemtype: "product" },
+      });
       if (!product) {
-        throw new ApiError(404, "Product not found or does not belong to this business");
+        throw new ApiError(
+          404,
+          "Product not found or does not belong to this business",
+        );
       }
       if (product.availablestock <= 0) {
         throw new ApiError(400, "Product is out of stock");
@@ -35,11 +40,16 @@ export const addToCart = asyncHandler(async (req, res) => {
       if (!giftid) {
         throw new ApiError(400, "Gift ID is required");
       }
-      const gift = await GiftModel.findOne({ where: { giftid, bid } });
+      const gift = await ProductModel.findOne({
+        where: { productid: giftid, bid, itemtype: "gift" },
+      });
       if (!gift) {
-        throw new ApiError(404, "Gift card not found or does not belong to this business");
+        throw new ApiError(
+          404,
+          "Gift card not found or does not belong to this business",
+        );
       }
-      if (gift.stock <= 0) {
+      if (gift.availablestock <= 0) {
         throw new ApiError(400, "Gift card is out of stock");
       }
     }
@@ -52,7 +62,7 @@ export const addToCart = asyncHandler(async (req, res) => {
       searchWhere.productid = productid;
       searchWhere.itemtype = "product";
     } else {
-      searchWhere.giftid = giftid;
+      searchWhere.productid = giftid;
       searchWhere.itemtype = "gift";
     }
 
@@ -64,19 +74,23 @@ export const addToCart = asyncHandler(async (req, res) => {
       // Check stock availability for new total quantity
       const newQuantity = cartItem.quantity + parsedQuantity;
       if (itemtype === "product") {
-        const product = await ProductModel.findOne({ where: { productid, bid } });
+        const product = await ProductModel.findOne({
+          where: { productid, bid, itemtype: "product" },
+        });
         if (product && product.availablestock < newQuantity) {
           throw new ApiError(
             400,
-            `Cannot add quantity. Only ${product.availablestock} units in stock, and you already have ${cartItem.quantity} in your cart.`
+            `Cannot add quantity. Only ${product.availablestock} units in stock, and you already have ${cartItem.quantity} in your cart.`,
           );
         }
       } else {
-        const gift = await GiftModel.findOne({ where: { giftid, bid } });
-        if (gift && gift.stock < newQuantity) {
+        const gift = await ProductModel.findOne({
+          where: { productid: giftid, bid, itemtype: "gift" },
+        });
+        if (gift && gift.availablestock < newQuantity) {
           throw new ApiError(
             400,
-            `Cannot add quantity. Only ${gift.stock} units in stock, and you already have ${cartItem.quantity} in your cart.`
+            `Cannot add quantity. Only ${gift.availablestock} units in stock, and you already have ${cartItem.quantity} in your cart.`,
           );
         }
       }
@@ -86,28 +100,35 @@ export const addToCart = asyncHandler(async (req, res) => {
     } else {
       // Double check stock for initial add
       if (itemtype === "product") {
-        const product = await ProductModel.findOne({ where: { productid, bid } });
+        const product = await ProductModel.findOne({
+          where: { productid, bid, itemtype: "product" },
+        });
         if (product && product.availablestock < parsedQuantity) {
-          throw new ApiError(400, `Only ${product.availablestock} units in stock`);
+          throw new ApiError(
+            400,
+            `Only ${product.availablestock} units in stock`,
+          );
         }
       } else {
-        const gift = await GiftModel.findOne({ where: { giftid, bid } });
-        if (gift && gift.stock < parsedQuantity) {
-          throw new ApiError(400, `Only ${gift.stock} units in stock`);
+        const gift = await ProductModel.findOne({
+          where: { productid: giftid, bid, itemtype: "gift" },
+        });
+        if (gift && gift.availablestock < parsedQuantity) {
+          throw new ApiError(400, `Only ${gift.availablestock} units in stock`);
         }
       }
 
       cartItem = await CartModel.create({
         userid,
         bid,
-        productid: itemtype === "product" ? productid : null,
-        giftid: itemtype === "gift" ? giftid : null,
+        productid: itemtype === "product" ? productid : giftid,
+        giftid: null,
         quantity: parsedQuantity,
         itemtype,
       });
     }
 
-    return res.status(200).json(new ApiResponse(200, { message: "Item added to cart" }));
+    return res.status(200).json(new ApiResponse(200, "Item added to cart"));
   } catch (error) {
     throw error;
   }
@@ -117,7 +138,9 @@ export const getCart = asyncHandler(async (req, res) => {
   try {
     const userid = req.user?.userid;
 
-    if (!userid) throw new ApiError(401, "User not authenticated");
+    if (!userid) {
+      throw new ApiError(401, "User not authenticated");
+    }
 
     const cartItems = await CartModel.findAll({
       where: { userid },
@@ -127,61 +150,76 @@ export const getCart = asyncHandler(async (req, res) => {
           as: "product",
           required: false,
         },
-        {
-          model: GiftModel,
-          as: "gift",
-          required: false,
-        },
       ],
+      order: [["createdAt", "DESC"]],
     });
 
-    const populatedCart = cartItems.map((item) => {
-      const data = item.toJSON();
+    let totalamount = 0;
 
-      if (data.itemtype === "product" && data.product) {
-        const producttotalprice =
-          data.quantity * (data.product.sellingprice || data.product.price);
+    const populatedCart = cartItems
+      .map((item) => {
+        const data = item.toJSON();
 
-        return {
-          cartid: data.cartid,
-          itemtype: "product",
-          quantity: data.quantity,
-          totalprice: producttotalprice,
-          productid: data.product.productid,
-          name: data.product.productname,
-          image: data.product.productimage || null,
-          price: data.product.price,
-          sellingprice: data.product.sellingprice,
-        };
-      }
+        if (!data.product) {
+          return null;
+        }
 
-      if (data.itemtype === "gift" && data.gift) {
-        const price = data.gift.giftsellingprice ?? data.gift.giftprice;
-        const gifttotalprice = data.quantity * price;
+        const price =
+          parseFloat(data.product.sellingprice) ||
+          parseFloat(data.product.price);
 
-        return {
-          cartid: data.cartid,
-          itemtype: "gift",
-          quantity: data.quantity,
-          totalprice: gifttotalprice,
-          giftid: data.gift.giftid,
-          name: data.gift.giftname,
-          image: data.gift.giftimage || null,
-          price: data.gift.giftprice,
-          sellingprice: data.gift.giftsellingprice,
-        };
-      }
-      return null;
-    });
+        const itemTotalPrice = data.quantity * price;
 
-    return res
-      .status(200)
-      .json(new ApiResponse(200, populatedCart.filter(Boolean)));
+        totalamount += itemTotalPrice;
+
+        if (data.itemtype === "product") {
+          return {
+            cartid: data.cartid,
+            itemtype: "product",
+            quantity: data.quantity,
+            totalprice: itemTotalPrice,
+            productid: data.product.productid,
+            name: data.product.productname,
+            image: data.product.productimage || null,
+            price: data.product.price,
+            sellingprice: data.product.sellingprice,
+            categoryname: data.product.categoryname,
+          };
+        }
+
+        if (data.itemtype === "gift") {
+          return {
+            cartid: data.cartid,
+            itemtype: "gift",
+            quantity: data.quantity,
+            totalprice: itemTotalPrice,
+            giftid: data.product.productid,
+            name: data.product.productname,
+            image: data.product.productimage || null,
+            price: data.product.price,
+            sellingprice: data.product.sellingprice,
+            categoryname: data.product.categoryname,
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean);
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          cart: populatedCart,
+          totalamount: totalamount,
+        },
+        "Cart fetched successfully",
+      ),
+    );
   } catch (error) {
     throw error;
   }
 });
-
 export const updateCartQuantity = asyncHandler(async (req, res) => {
   try {
     const userid = req.user?.userid;
@@ -197,10 +235,7 @@ export const updateCartQuantity = asyncHandler(async (req, res) => {
 
     const cartItem = await CartModel.findOne({
       where: { cartid, userid },
-      include: [
-        { model: ProductModel, as: "product", required: false },
-        { model: GiftModel, as: "gift", required: false },
-      ],
+      include: [{ model: ProductModel, as: "product", required: false }],
     });
 
     if (!cartItem) throw new ApiError(404, "Cart item not found");
@@ -209,7 +244,7 @@ export const updateCartQuantity = asyncHandler(async (req, res) => {
       await cartItem.destroy();
       return res
         .status(200)
-        .json(new ApiResponse(200, { message: "Item removed from cart" }));
+        .json(new ApiResponse(200, "Item removed from cart"));
     }
 
     // Check stock availability
@@ -217,14 +252,14 @@ export const updateCartQuantity = asyncHandler(async (req, res) => {
       if (cartItem.product.availablestock < parsedQuantity) {
         throw new ApiError(
           400,
-          `Only ${cartItem.product.availablestock} units of this product are in stock`
+          `Only ${cartItem.product.availablestock} units of this product are in stock`,
         );
       }
-    } else if (cartItem.itemtype === "gift" && cartItem.gift) {
-      if (cartItem.gift.stock < parsedQuantity) {
+    } else if (cartItem.itemtype === "gift" && cartItem.product) {
+      if (cartItem.product.availablestock < parsedQuantity) {
         throw new ApiError(
           400,
-          `Only ${cartItem.gift.stock} units of this gift are in stock`
+          `Only ${cartItem.product.availablestock} units of this gift are in stock`,
         );
       }
     }
@@ -232,7 +267,9 @@ export const updateCartQuantity = asyncHandler(async (req, res) => {
     cartItem.quantity = parsedQuantity;
     await cartItem.save();
 
-    return res.status(200).json(new ApiResponse(200, cartItem));
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Cart updated successfully"));
   } catch (error) {
     throw error;
   }

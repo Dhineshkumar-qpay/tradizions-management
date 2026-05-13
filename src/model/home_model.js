@@ -49,9 +49,17 @@ TradizionsReviewModel.init(
       type: DataTypes.FLOAT,
       allowNull: false,
     },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     review: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
     },
   },
   {
@@ -62,4 +70,50 @@ TradizionsReviewModel.init(
   },
 );
 
-export { ThinamOruKuralModel, TradizionsReviewModel };
+class ContactUsModel extends Model {}
+
+ContactUsModel.init(
+  {
+    contactid: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        isNumeric: true,
+        len: [10, 10],
+      },
+    },
+    description: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    quantity: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    type: {
+      type: DataTypes.ENUM("normal", "corporate"),
+      defaultValue: "normal",
+    },
+  },
+  {
+    sequelize: sequelize,
+    tableName: "contactus",
+    modelName: "ContactUsModel",
+    timestamps: true,
+  },
+);
+
+export { ThinamOruKuralModel, TradizionsReviewModel, ContactUsModel };

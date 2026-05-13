@@ -19,9 +19,10 @@ export const addFavourite = asyncHandler(async (req, res) => {
     });
 
     if (existingFavourite) {
+      await existingFavourite.destroy();
       return res
         .status(200)
-        .json(new ApiResponse(200, "Product is already in favorites"));
+        .json(new ApiResponse(200, "Product removed from favorites"));
     }
 
     await FavouriteProductModel.create({ userid, productid });
@@ -29,28 +30,6 @@ export const addFavourite = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, "Product added to favorites"));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const removeFavourite = asyncHandler(async (req, res) => {
-  try {
-    const userid = req.user?.userid;
-    const { productid } = req.body;
-
-    if (!userid) throw new ApiError(401, "User not authenticated");
-    if (!productid) throw new ApiError(400, "Product ID is required");
-
-    const result = await FavouriteProductModel.destroy({
-      where: { userid, productid },
-    });
-
-    if (result === 0) throw new ApiError(404, "Product not found in favorites");
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Product removed from favorites"));
   } catch (error) {
     throw error;
   }
@@ -68,16 +47,28 @@ export const getFavourites = asyncHandler(async (req, res) => {
         {
           model: ProductModel,
           as: "product",
-          attributes: {
-            exclude: ["createdAt", "updatedAt"],
-          },
+          attributes: [
+            "productid",
+            "bid",
+            "productimage",
+            "productname",
+            "categoryid",
+            "subcategoryid",
+            "price",
+            "sellingprice",
+            "isFavourite",
+            "itemtype",
+          ],
         },
       ],
     });
 
     const updatedFavourites = favourites.map((fav) => {
       const data = fav.toJSON();
-      return data.product;
+      return {
+        ...data.product,
+        isFavourite: true,
+      };
     });
 
     return res.status(200).json(new ApiResponse(200, updatedFavourites));

@@ -4,42 +4,46 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 
 export const addAddress = asyncHandler(async (req, res) => {
-  const userid = req.user?.userid;
-  if (!userid) {
-    throw new ApiError(401, "User not authenticated");
-  }
-
-  const { addressid } = req.body;
-
-  let data;
-
-  if (addressid) {
-    data = await AddressModel.findOne({
-      where: {
-        addressid,
-        userid,
-      },
-    });
-
-    if (!data) {
-      throw new ApiError(404, "Address not found");
+  try {
+    const userid = req.user?.userid;
+    if (!userid) {
+      throw new ApiError(401, "User not authenticated");
     }
 
-    await data.update(req.body);
+    const { addressid } = req.body;
+
+    let data;
+
+    if (addressid) {
+      data = await AddressModel.findOne({
+        where: {
+          addressid,
+          userid,
+        },
+      });
+
+      if (!data) {
+        throw new ApiError(404, "Address not found");
+      }
+
+      await data.update(req.body);
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, "Address updated successfully", data));
+    }
+
+    data = await AddressModel.create({
+      ...req.body,
+      userid,
+    });
 
     return res
       .status(200)
-      .json(new ApiResponse(200, "Address updated successfully", data));
+      .json(new ApiResponse(200, "Address created successfully", data));
+  } catch (error) {
+    throw error;
   }
-
-  data = await AddressModel.create({
-    ...req.body,
-    userid,
-  });
-
-  return res
-    .status(200)
-    .json(new ApiResponse(201, "Address created successfully", data));
 });
 
 export const deleteAddress = asyncHandler(async (req, res) => {
@@ -82,10 +86,7 @@ export const getAllAddress = asyncHandler(async (req, res) => {
       },
     });
 
-    return res
-      .status(200)
-      .json(new ApiResponse(200, addresses));
-      
+    return res.status(200).json(new ApiResponse(200, addresses));
   } catch (error) {
     throw error;
   }

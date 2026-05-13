@@ -15,6 +15,10 @@ BusinessModel.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    merchantname: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     description: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -22,6 +26,13 @@ BusinessModel.init(
     verified: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+    },
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        len: [10, 10],
+      },
     },
     userid: {
       type: DataTypes.INTEGER,

@@ -31,4 +31,10 @@ export const adminOnly = (req, res, next) => {
   }
 };
 
-
+export const userOnly = (req, res, next) => {
+  if (req.user && req.user?.role === "user") {
+    next();
+  } else {
+    throw new ApiError(403, "Access denied: User only");
+  }
+};

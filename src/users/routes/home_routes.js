@@ -14,8 +14,8 @@ const router = express.Router();
 router.post("/product/getallproducts", getAllProducts);
 router.post("/product/product-detail", getProductDetail);
 
-router.post("/gift/gifts", getAllGifts);
-router.post("/gift/gift-detail", giftDetails);
+router.post("/product/gifts", getAllGifts);
+router.post("/product/gift-detail", giftDetails);
 
 router.post("/product/add-update-rating", verifyToken, addProductRating);
 router.post("/product/delete-rating", verifyToken, deleteRating);

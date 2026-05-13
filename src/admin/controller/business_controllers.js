@@ -12,7 +12,7 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import fs from "fs";
 import { sequelize } from "../../../connection.js";
-import { GiftModel, ProductModel } from "../../model/product_gift_model.js";
+import { ProductModel } from "../../model/product_gift_model.js";
 
 export const addBusiness = asyncHandler(async (req, res) => {
   try {
@@ -34,7 +34,7 @@ export const addBusiness = asyncHandler(async (req, res) => {
     }
 
     return res
-      .status(201)
+      .status(200)
       .json(new ApiResponse(200, "Business added successfully"));
   } catch (error) {
     throw error;
@@ -90,54 +90,6 @@ export const getAllBusiness = asyncHandler(async (req, res) => {
   }
 });
 
-export const getBusinessVerifiedPercentage = asyncHandler(async (req, res) => {
-  const { bid } = req.body;
-
-  if (!bid) throw new ApiError(400, "Bid is required");
-
-  const [
-    basicInfo,
-    shopInfo,
-    addressInfo,
-    bankinfo,
-    inventoryinfo,
-    giftcardinfo,
-  ] = await Promise.all([
-    BasicInfoModel.findOne({ where: { bid } }),
-    BusinessInfoModel.findOne({ where: { bid } }),
-    BusinessAddressModel.findOne({ where: { bid } }),
-    BusinessBankModel.findOne({ where: { bid } }),
-    ProductModel.findOne({ where: { bid } }),
-    GiftModel.findOne({ where: { bid } }),
-  ]);
-
-  const status = {
-    basicinfo: !!basicInfo,
-    shopInfo: !!shopInfo,
-    addressInfo: !!addressInfo,
-    bankinfo: !!bankinfo,
-    inventoryinfo: !!inventoryinfo,
-    giftcardinfo: !!giftcardinfo,
-  };
-
-  const totalSections = Object.keys(status).length;
-
-  const completedSections = Object.values(status).filter(
-    (value) => value === true,
-  ).length;
-
-  const percentage = Math.round((completedSections / totalSections) * 100);
-
-  const verified = percentage === 100;
-
-  return res.status(200).json(
-    new ApiResponse(200, {
-      ...status,
-      percentage,
-      verified,
-    }),
-  );
-});
 /* ------------------------- Admin business API's -------------------------  */
 
 export const getTotalBusiness = asyncHandler(async (req, res) => {
@@ -468,7 +420,7 @@ export const addAddressInfo = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(201, "Address added successfully"));
+    .json(new ApiResponse(200, "Address added successfully"));
 });
 
 export const getAddressInfo = asyncHandler(async (req, res) => {

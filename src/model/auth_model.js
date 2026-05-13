@@ -1,7 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../../connection.js";
 
-class AuthModel extends Model { }
+class AuthModel extends Model {}
 
 AuthModel.init(
   {
@@ -18,12 +18,8 @@ AuthModel.init(
 
     email: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       unique: true,
-      validate: {
-        isEmail: true,
-        notEmpty: true,
-      },
     },
 
     otp: {

@@ -1,7 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../../connection.js";
 import { AuthModel } from "./auth_model.js";
-import { ProductModel, GiftModel } from "./product_gift_model.js";
+import { ProductModel } from "./product_gift_model.js";
 import { BusinessModel } from "./business_model.js";
 
 class CartModel extends Model {}
@@ -37,14 +37,6 @@ CartModel.init(
         key: "productid",
       },
     },
-    giftid: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: GiftModel,
-        key: "giftid",
-      },
-    },
     quantity: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -67,6 +59,5 @@ export { CartModel };
 
 // Associations
 CartModel.belongsTo(ProductModel, { foreignKey: "productid", as: "product" });
-CartModel.belongsTo(GiftModel, { foreignKey: "giftid", as: "gift" });
 CartModel.belongsTo(AuthModel, { foreignKey: "userid", as: "user" });
 CartModel.belongsTo(BusinessModel, { foreignKey: "bid", as: "business" });

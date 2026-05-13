@@ -12,7 +12,6 @@ import {
   getBankInfo,
   getBasicInfo,
   getBusinessInfo,
-  getBusinessVerifiedPercentage,
   getKyc,
   getTotalBusiness,
   updateKyc,
@@ -26,7 +25,6 @@ const router = express.Router();
 router.post("/admin/businesses", verifyToken, getTotalBusiness);
 
 router.post("/business/addbusiness", verifyToken, addBusiness);
-router.post("/business/percentage", verifyToken, getBusinessVerifiedPercentage);
 router.post("/business/deletebusiness", verifyToken, deleteBusiness);
 router.post("/business/getallbusiness", verifyToken, getAllBusiness);
 router.post("/business/verify", verifyToken, adminOnly, verifyBusiness);

@@ -2,7 +2,6 @@ import { where } from "sequelize";
 import {
   ProductModel,
   ProductImagesModel,
-  GiftModel,
   ProductReviewModel,
 } from "../../model/product_gift_model.js";
 import { ApiError } from "../../utils/ApiError.js";
@@ -51,6 +50,7 @@ export const addProductImage = asyncHandler(async (req, res) => {
 
 export const addProduct = asyncHandler(async (req, res) => {
   const {
+    productid,
     bid,
     productname,
     categoryid,
@@ -104,6 +104,50 @@ export const addProduct = asyncHandler(async (req, res) => {
       throw new ApiError(400, "All fields are required");
     }
 
+    if (productid) {
+      const existingProduct = await ProductModel.findOne({
+        where: { productid, bid },
+      });
+
+      if (!existingProduct) throw new ApiError(404, "Product not found");
+
+      await existingProduct.update({
+        productimage: productimage !== undefined ? productimage : existingProduct.productimage,
+        productname: productname.trim(),
+        categoryid,
+        categoryname: categoryname.trim(),
+        subcategoryid,
+        subcategoryname: subcategoryname.trim(),
+        brandname: brandname.trim(),
+        description: description.trim(),
+        sellingprice,
+        price,
+        weight,
+        unit,
+        availablestock,
+        isFeatured: isFeatured !== undefined ? isFeatured : existingProduct.isFeatured,
+        isTrending: isTrending !== undefined ? isTrending : existingProduct.isTrending,
+        isBestSeller: isBestSeller !== undefined ? isBestSeller : existingProduct.isBestSeller,
+        isActive: isActive !== undefined ? isActive : existingProduct.isActive,
+        ingredients: ingredients || null,
+        shelflife: shelflife || null,
+        storageinfo: storageinfo || null,
+        calories: calories !== undefined ? calories : existingProduct.calories,
+        protien: protien !== undefined ? protien : existingProduct.protien,
+        fibre: fibre !== undefined ? fibre : existingProduct.fibre,
+        fat: fat !== undefined ? fat : existingProduct.fat,
+        carbohydrates: carbohydrates !== undefined ? carbohydrates : existingProduct.carbohydrates,
+        country: country || "India",
+      });
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, {
+          message: "Product updated successfully",
+          productid: existingProduct.productid,
+        }));
+    }
+
     const product = await ProductModel.create({
       bid,
       productimage,
@@ -135,8 +179,11 @@ export const addProduct = asyncHandler(async (req, res) => {
     });
 
     return res
-      .status(201)
-      .json(new ApiResponse(201, "Product added successfully"));
+      .status(200)
+      .json(new ApiResponse(200, {
+        message: "Product added successfully",
+        productid: product.productid,
+      }));
   } catch (error) {
     throw error;
   }
@@ -513,25 +560,26 @@ export const addGift = asyncHandler(async (req, res) => {
       }
     }
 
-    const gift = await GiftModel.create({
+    const gift = await ProductModel.create({
       bid,
-      giftname: giftname.trim(),
-      giftimage,
+      productname: giftname.trim(),
+      productimage: giftimage,
       categoryid,
       categoryname: categoryname.trim(),
       subcategoryid,
       subcategoryname: subcategoryname.trim(),
-      giftdescription: giftdescription.trim(),
+      description: giftdescription.trim(),
       productlist: parsedProductList,
-      giftprice,
-      giftsellingprice: giftsellingprice !== undefined ? giftsellingprice : null,
-      stock,
+      price: giftprice,
+      sellingprice: giftsellingprice !== undefined ? giftsellingprice : null,
+      availablestock: stock,
       packingtype: packingtype.trim(),
+      itemtype: "gift",
     });
 
     return res
-      .status(201)
-      .json(new ApiResponse(201, "Gift card added successfully"));
+      .status(200)
+      .json(new ApiResponse(200, "Gift card added successfully"));
   } catch (error) {
     throw error;
   }
@@ -559,8 +607,8 @@ export const editGift = asyncHandler(async (req, res) => {
     if (!giftid) throw new ApiError(400, "Gift id is required");
     if (!bid) throw new ApiError(400, "Bid is required");
 
-    const existingGift = await GiftModel.findOne({
-      where: { giftid, bid },
+    const existingGift = await ProductModel.findOne({
+      where: { productid: giftid, bid, itemtype: "gift" },
     });
 
     if (!existingGift) throw new ApiError(404, "Gift not found");
@@ -575,23 +623,24 @@ export const editGift = asyncHandler(async (req, res) => {
     }
 
     await existingGift.update({
-      giftname: giftname?.trim() || existingGift.giftname,
-      giftimage: giftimage !== undefined ? giftimage : existingGift.giftimage,
+      productname: giftname?.trim() || existingGift.productname,
+      productimage:
+        giftimage !== undefined ? giftimage : existingGift.productimage,
       categoryid: categoryid || existingGift.categoryid,
       categoryname: categoryname?.trim() || existingGift.categoryname,
       subcategoryid: subcategoryid || existingGift.subcategoryid,
       subcategoryname: subcategoryname?.trim() || existingGift.subcategoryname,
-      giftdescription: giftdescription?.trim() || existingGift.giftdescription,
+      description: giftdescription?.trim() || existingGift.description,
       productlist:
         parsedProductList !== undefined
           ? parsedProductList
           : existingGift.productlist,
-      giftprice: giftprice !== undefined ? giftprice : existingGift.giftprice,
-      giftsellingprice:
+      price: giftprice !== undefined ? giftprice : existingGift.price,
+      sellingprice:
         giftsellingprice !== undefined
           ? giftsellingprice
-          : existingGift.giftsellingprice,
-      stock: stock !== undefined ? stock : existingGift.stock,
+          : existingGift.sellingprice,
+      availablestock: stock !== undefined ? stock : existingGift.availablestock,
       packingtype: packingtype?.trim() || existingGift.packingtype,
     });
 
@@ -604,46 +653,66 @@ export const editGift = asyncHandler(async (req, res) => {
 });
 
 export const deleteGift = asyncHandler(async (req, res) => {
-  const { giftid, bid } = req.body;
+  try {
+    const { giftid, bid } = req.body;
 
-  if (!giftid) throw new ApiError(400, "Gift id is required");
-  if (!bid) throw new ApiError(400, "Bid is required");
+    if (!giftid) throw new ApiError(400, "Gift id is required");
+    if (!bid) throw new ApiError(400, "Bid is required");
 
-  const result = await GiftModel.destroy({
-    where: { giftid, bid },
-  });
+    const result = await ProductModel.destroy({
+      where: { productid: giftid, bid, itemtype: "gift" },
+    });
 
-  if (result === 0) throw new ApiError(404, "Gift not found");
+    if (result === 0) throw new ApiError(404, "Gift not found");
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, "Gift deleted successfully"));
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Gift deleted successfully"));
+  } catch (error) {
+    throw error;
+  }
 });
 
 export const getMerchantGifts = asyncHandler(async (req, res) => {
-  const { bid } = req.body;
+  try {
+    const { bid } = req.body;
 
-  if (!bid) throw new ApiError(400, "Bid is required");
+    if (!bid) throw new ApiError(400, "Bid is required");
 
-  const gifts = await GiftModel.findAll({
-    where: { bid },
-  });
+    const gifts = await ProductModel.findAll({
+      where: { bid, itemtype: "gift" },
+    });
 
-  const updatedgifts = gifts.map((gift) => {
-    const data = gift.toJSON();
-    let parsedProductList = data.productlist;
-    if (typeof parsedProductList === "string") {
-      try {
-        parsedProductList = JSON.parse(parsedProductList);
-      } catch (e) {
-        parsedProductList = [];
+    const updatedgifts = gifts.map((gift) => {
+      const data = gift.toJSON();
+      let parsedProductList = data.productlist;
+      if (typeof parsedProductList === "string") {
+        try {
+          parsedProductList = JSON.parse(parsedProductList);
+        } catch (e) {
+          parsedProductList = [];
+        }
       }
-    }
-    return {
-      ...data,
-      productlist: parsedProductList || [],
-    };
-  });
+      return {
+        giftid: data.productid,
+        bid: data.bid,
+        giftname: data.productname,
+        giftimage: data.productimage,
+        categoryid: data.categoryid,
+        categoryname: data.categoryname,
+        subcategoryid: data.subcategoryid,
+        subcategoryname: data.subcategoryname,
+        giftdescription: data.description,
+        productlist: parsedProductList || [],
+        giftprice: data.price,
+        giftsellingprice: data.sellingprice,
+        stock: data.availablestock,
+        packingtype: data.packingtype,
+      };
+    });
 
-  return res.status(200).json(new ApiResponse(200, updatedgifts));
+    return res.status(200).json(new ApiResponse(200, updatedgifts));
+  } catch (error) {
+    throw error;
+  }
 });

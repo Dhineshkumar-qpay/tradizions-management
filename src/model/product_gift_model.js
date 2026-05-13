@@ -47,7 +47,7 @@ ProductModel.init(
     },
     brandname: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     description: {
       type: DataTypes.STRING,
@@ -63,7 +63,7 @@ ProductModel.init(
     },
     weight: {
       type: DataTypes.FLOAT,
-      allowNull: false,
+      allowNull: true,
     },
     unit: {
       type: DataTypes.ENUM("kg", "g", "Pcs", "ml", "l"),
@@ -71,9 +71,13 @@ ProductModel.init(
     },
     availablestock: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     isFeatured: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    isFavourite: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
@@ -124,6 +128,22 @@ ProductModel.init(
     country: {
       type: DataTypes.STRING,
       defaultValue: "India",
+    },
+    productlist: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    packingtype: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    itemtype: {
+      type: DataTypes.ENUM("product", "gift"),
+      defaultValue: "product",
+    },
+    gifttype: {
+      type: DataTypes.ENUM("nuts", "pooja"),
+      defaultValue: "nuts",
     },
   },
   {
@@ -241,81 +261,7 @@ ProductReviewModel.init(
   },
 );
 
-class GiftModel extends Model {}
-
-GiftModel.init(
-  {
-    giftid: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    bid: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: BusinessModel,
-        key: "bid",
-      },
-    },
-    categoryid: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    categoryname: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    subcategoryid: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    subcategoryname: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    giftname: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    giftimage: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    giftdescription: {
-      type: DataTypes.TEXT,
-      allowNull: false,
-    },
-    productlist: {
-      type: DataTypes.JSON,
-      allowNull: false,
-    },
-    giftprice: {
-      type: DataTypes.FLOAT,
-      allowNull: false,
-    },
-    giftsellingprice: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
-    },
-    stock: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    packingtype: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-  },
-  {
-    sequelize: sequelize,
-    tableName: "gifts",
-    modelName: "GiftModel",
-    timestamps: true,
-  },
-);
-
-export { ProductModel, ProductImagesModel, ProductReviewModel, GiftModel };
+export { ProductModel, ProductImagesModel, ProductReviewModel };
 
 ProductReviewModel.belongsTo(AuthModel, { foreignKey: "userid", as: "user" });
 

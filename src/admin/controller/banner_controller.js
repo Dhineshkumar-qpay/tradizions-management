@@ -22,8 +22,8 @@ export const addBanner = asyncHandler(async (req, res) => {
     });
 
     return res
-      .status(201)
-      .json(new ApiResponse(201, banner, "Banner added successfully"));
+      .status(200)
+      .json(new ApiResponse(200, banner, "Banner added successfully"));
   } catch (error) {
     throw error;
   }
