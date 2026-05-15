@@ -99,3 +99,23 @@ export const verifyAdminOTP = asyncHandler(async (req, res) => {
     throw error;
   }
 });
+
+// --------------------- get all users -------------------------
+
+export const getAllUsers = asyncHandler(async (req, res) => {
+  try {
+    const users = await AuthModel.findAll({
+      attributes: [
+        "userid",
+        "username",
+        "phone",
+        "email",
+        "profileimage",
+        "createdAt",
+      ],
+    });
+    return res.status(200).json(new ApiResponse(200, users));
+  } catch (error) {
+    throw error;
+  }
+});

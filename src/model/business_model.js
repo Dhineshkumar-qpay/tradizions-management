@@ -15,7 +15,7 @@ BusinessModel.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    merchantname: {
+    username: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -23,9 +23,9 @@ BusinessModel.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    verified: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
+    status: {
+      type: DataTypes.ENUM("active", "inactive"),
+      defaultValue: "inactive",
     },
     phone: {
       type: DataTypes.STRING,

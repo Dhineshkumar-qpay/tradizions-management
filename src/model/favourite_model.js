@@ -12,6 +12,7 @@ FavouriteProductModel.init(
       primaryKey: true,
       autoIncrement: true,
     },
+
     userid: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -20,6 +21,7 @@ FavouriteProductModel.init(
         key: "userid",
       },
     },
+
     productid: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -37,13 +39,16 @@ FavouriteProductModel.init(
   },
 );
 
-FavouriteProductModel.belongsTo(AuthModel, {
-  foreignKey: "userid",
-  as: "user",
-});
+// ================= ASSOCIATIONS =================
+
 FavouriteProductModel.belongsTo(ProductModel, {
   foreignKey: "productid",
   as: "product",
+});
+
+ProductModel.hasMany(FavouriteProductModel, {
+  foreignKey: "productid",
+  as: "favourites",
 });
 
 export { FavouriteProductModel };

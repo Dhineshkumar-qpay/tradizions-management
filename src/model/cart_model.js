@@ -1,7 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../../connection.js";
 import { AuthModel } from "./auth_model.js";
-import { ProductModel } from "./product_gift_model.js";
+import { GiftcardModel, ProductModel } from "./product_gift_model.js";
 import { BusinessModel } from "./business_model.js";
 
 class CartModel extends Model {}
@@ -41,6 +41,14 @@ CartModel.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 1,
+    },
+    giftcardid: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: GiftcardModel,
+        key: "giftcardid",
+      },
     },
     itemtype: {
       type: DataTypes.ENUM("product", "gift"),

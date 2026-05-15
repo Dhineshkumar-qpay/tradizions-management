@@ -10,10 +10,8 @@ import {
   addNormalContactUs,
   addThinamoruKural,
   deleteAppReview,
-  deleteCorporateContactUs,
-  deleteNormalContactUs,
+  deleteContactUs,
   getAllAppReviews,
-  getCorporateContactUs,
   getHomeProducts,
   getKural,
   getNormalContactUs,
@@ -35,30 +33,18 @@ router.post("/product/get-all-products", verifyToken, getAllProducts);
 
 // contact us routes
 router.post("/contact/add-normal-contactus", addNormalContactUs);
+router.post("/contact/add-corporate-contactus", addCorporateContactUs);
 router.post(
-  "/contact/get-normal-contactus",
+  "/contact/delete-contactus",
+  verifyToken,
+  adminOnly,
+  deleteContactUs,
+);
+router.post(
+  "/contact/get-contacts",
   verifyToken,
   adminOnly,
   getNormalContactUs,
-);
-router.post(
-  "/contact/delete-normal-contactus",
-  verifyToken,
-  adminOnly,
-  deleteNormalContactUs,
-);
-router.post("/contact/add-corporate-contactus", addCorporateContactUs);
-router.post(
-  "/contact/get-corporate-contactus",
-  verifyToken,
-  adminOnly,
-  getCorporateContactUs,
-);
-router.post(
-  "/contact/delete-corporate-contactus",
-  verifyToken,
-  adminOnly,
-  deleteCorporateContactUs,
 );
 
 // Review

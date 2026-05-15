@@ -3,6 +3,7 @@ import {
   ProductModel,
   ProductImagesModel,
   ProductReviewModel,
+  GiftcardModel,
 } from "../../model/product_gift_model.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
@@ -112,7 +113,10 @@ export const addProduct = asyncHandler(async (req, res) => {
       if (!existingProduct) throw new ApiError(404, "Product not found");
 
       await existingProduct.update({
-        productimage: productimage !== undefined ? productimage : existingProduct.productimage,
+        productimage:
+          productimage !== undefined
+            ? productimage
+            : existingProduct.productimage,
         productname: productname.trim(),
         categoryid,
         categoryname: categoryname.trim(),
@@ -125,9 +129,14 @@ export const addProduct = asyncHandler(async (req, res) => {
         weight,
         unit,
         availablestock,
-        isFeatured: isFeatured !== undefined ? isFeatured : existingProduct.isFeatured,
-        isTrending: isTrending !== undefined ? isTrending : existingProduct.isTrending,
-        isBestSeller: isBestSeller !== undefined ? isBestSeller : existingProduct.isBestSeller,
+        isFeatured:
+          isFeatured !== undefined ? isFeatured : existingProduct.isFeatured,
+        isTrending:
+          isTrending !== undefined ? isTrending : existingProduct.isTrending,
+        isBestSeller:
+          isBestSeller !== undefined
+            ? isBestSeller
+            : existingProduct.isBestSeller,
         isActive: isActive !== undefined ? isActive : existingProduct.isActive,
         ingredients: ingredients || null,
         shelflife: shelflife || null,
@@ -136,16 +145,19 @@ export const addProduct = asyncHandler(async (req, res) => {
         protien: protien !== undefined ? protien : existingProduct.protien,
         fibre: fibre !== undefined ? fibre : existingProduct.fibre,
         fat: fat !== undefined ? fat : existingProduct.fat,
-        carbohydrates: carbohydrates !== undefined ? carbohydrates : existingProduct.carbohydrates,
+        carbohydrates:
+          carbohydrates !== undefined
+            ? carbohydrates
+            : existingProduct.carbohydrates,
         country: country || "India",
       });
 
-      return res
-        .status(200)
-        .json(new ApiResponse(200, {
+      return res.status(200).json(
+        new ApiResponse(200, {
           message: "Product updated successfully",
           productid: existingProduct.productid,
-        }));
+        }),
+      );
     }
 
     const product = await ProductModel.create({
@@ -178,12 +190,12 @@ export const addProduct = asyncHandler(async (req, res) => {
       country: country || "India",
     });
 
-    return res
-      .status(200)
-      .json(new ApiResponse(200, {
+    return res.status(200).json(
+      new ApiResponse(200, {
         message: "Product added successfully",
         productid: product.productid,
-      }));
+      }),
+    );
   } catch (error) {
     throw error;
   }
@@ -323,7 +335,7 @@ export const getAllProducts = asyncHandler(async (req, res) => {
     if (!businessFound) throw new ApiError(400, "Business not found");
 
     const products = await ProductModel.findAll({
-      where: { bid },
+      where: { bid, itemtype: "product" },
       attributes: {
         exclude: ["createdAt", "updatedAt"],
       },
@@ -712,6 +724,215 @@ export const getMerchantGifts = asyncHandler(async (req, res) => {
     });
 
     return res.status(200).json(new ApiResponse(200, updatedgifts));
+  } catch (error) {
+    throw error;
+  }
+});
+
+/// --------------------------- Gift cards ---------------------------///
+
+export const addGiftCard = asyncHandler(async (req, res) => {
+  const { cardname, cardprice, bid } = req.body;
+
+  try {
+    if (!cardname?.trim() || !cardprice) {
+      throw new ApiError(400, "All fields are required");
+    }
+
+    if (!bid) throw new ApiError(400, "Bid is required");
+
+    const cardimage = `/${req.file.path.replace(/\\/g, "/")}`;
+
+    const giftcard = await GiftcardModel.create({
+      cardname: cardname.trim(),
+      cardprice: cardprice,
+      cardimage: cardimage,
+      bid: bid,
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Gift card added successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getGiftCards = asyncHandler(async (req, res) => {
+  try {
+    const { bid } = req.body;
+    if (!bid) {
+      throw new ApiError(400, "Bid is required");
+    }
+    const giftcards = await GiftcardModel.findAll({
+      where: { bid: bid },
+    });
+    return res.status(200).json(new ApiResponse(200, giftcards));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const deleteGiftCard = asyncHandler(async (req, res) => {
+  try {
+    const { giftcardid, bid } = req.body;
+    if (!giftcardid) {
+      throw new ApiError(400, "Card id is required");
+    }
+    if (!bid) {
+      throw new ApiError(400, "Bid is required");
+    }
+
+    const giftcard = await GiftcardModel.findOne({
+      where: { giftcardid: giftcardid, bid: bid },
+    });
+    if (!giftcard) {
+      throw new ApiError(404, "Gift card not found");
+    }
+    const filepath = giftcard.cardimage.replace("/", "");
+    if (fs.existsSync(filepath)) {
+      fs.unlinkSync(filepath);
+    }
+    await giftcard.destroy();
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Gift card deleted successfully"));
+
+  } catch (error) {
+    throw error;
+  }
+});
+
+/// --------------------------- Ratings Functions ---------------------------///
+
+export const addProductRating = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+
+    const { bid, review, rating, productid, title, email, name, productname } =
+      req.body;
+
+    const existingReview = await ProductReviewModel.findOne({
+      where: {
+        userid,
+        productid,
+        bid,
+      },
+    });
+
+    let responseMessage = "";
+
+    if (existingReview) {
+      await existingReview.update({
+        review,
+        rating,
+        title,
+        email,
+        name,
+        productname: productname,
+      });
+
+      responseMessage = "Review updated successfully";
+    } else {
+      await ProductReviewModel.create({
+        userid,
+        bid,
+        productid,
+        review,
+        rating,
+        title,
+        email,
+        name,
+        productname,
+      });
+
+      responseMessage = "Review added successfully";
+    }
+
+    return res.status(200).json(new ApiResponse(200, responseMessage));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const deleteRating = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+    const { productid, bid } = req.body;
+    if (!bid) {
+      throw new ApiError(400, "Bid is required");
+    }
+
+    if (!productid) {
+      throw new ApiError(400, "Product ID is required");
+    }
+
+    const review = await ProductReviewModel.findOne({
+      where: {
+        userid,
+        productid,
+      },
+    });
+    if (!review) {
+      throw new ApiError(400, "Review not found");
+    }
+    await review.destroy();
+    return res.status(200).json(new ApiResponse(200, "Review deleted"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const ratingStatusUpdate = asyncHandler(async (req, res) => {
+  try {
+    const { bid, productid, status } = req.body;
+
+    if (!bid) {
+      throw new ApiError(400, "Bid is required");
+    }
+
+    if (!productid) {
+      throw new ApiError(400, "Product ID is required");
+    }
+
+    if (status === undefined || status === null) {
+      throw new ApiError(400, "Status is required");
+    }
+
+    const existingReview = await ProductReviewModel.findOne({
+      where: {
+        bid,
+        productid,
+      },
+    });
+
+    if (!existingReview) {
+      throw new ApiError(404, "Review not found");
+    }
+
+    await existingReview.update({
+      status,
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Review status updated successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getAllProductRatings = asyncHandler(async (req, res) => {
+  try {
+    const { bid } = req.body;
+    if (!bid) throw new ApiError(400, "Bid is required");
+    const ratings = await ProductReviewModel.findAll({
+      where: {
+        bid: bid,
+      },
+    });
+
+    return res.status(200).json(new ApiResponse(200, ratings));
   } catch (error) {
     throw error;
   }

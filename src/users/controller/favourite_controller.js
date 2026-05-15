@@ -73,6 +73,10 @@ export const getFavourites = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, updatedFavourites));
   } catch (error) {
-    throw error;
+    console.log(`{-------------------------------}`+req.user.userid);
+    
+    if (req.user.userid) {
+      throw error;
+    }
   }
 });

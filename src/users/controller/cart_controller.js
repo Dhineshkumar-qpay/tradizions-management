@@ -1,5 +1,5 @@
 import { CartModel } from "../../model/cart_model.js";
-import { ProductModel } from "../../model/product_gift_model.js";
+import { GiftcardModel, ProductModel } from "../../model/product_gift_model.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
@@ -156,61 +156,78 @@ export const getCart = asyncHandler(async (req, res) => {
 
     let totalamount = 0;
 
-    const populatedCart = cartItems
-      .map((item) => {
-        const data = item.toJSON();
+    let allGiftCards = [];
 
-        if (!data.product) {
+    const updatedCart = await Promise.all(
+      cartItems
+        .map(async (item) => {
+          const data = item.toJSON();
+
+          if (!data.product) {
+            return null;
+          }
+
+          const bids = [data.bid];
+
+          if (data.itemtype === "gift") {
+            const giftCards = await GiftcardModel.findAll({
+              where: {
+                bid: bids,
+              },
+            });
+
+            allGiftCards.push(...giftCards);
+          }
+
+          const price =
+            parseFloat(data.product.sellingprice) ||
+            parseFloat(data.product.price);
+
+          const itemTotalPrice = data.quantity * price;
+
+          totalamount += itemTotalPrice;
+
+          if (data.itemtype === "product") {
+            return {
+              cartid: data.cartid,
+              itemtype: "product",
+              quantity: data.quantity,
+              totalprice: itemTotalPrice,
+              productid: data.product.productid,
+              name: data.product.productname,
+              image: data.product.productimage || null,
+              price: data.product.price,
+              sellingprice: data.product.sellingprice,
+              categoryname: data.product.categoryname,
+            };
+          }
+
+          if (data.itemtype === "gift") {
+            return {
+              cartid: data.cartid,
+              itemtype: "gift",
+              quantity: data.quantity,
+              totalprice: itemTotalPrice,
+              giftid: data.product.productid,
+              name: data.product.productname,
+              image: data.product.productimage || null,
+              price: data.product.price,
+              sellingprice: data.product.sellingprice,
+              categoryname: data.product.categoryname,
+            };
+          }
+
           return null;
-        }
-
-        const price =
-          parseFloat(data.product.sellingprice) ||
-          parseFloat(data.product.price);
-
-        const itemTotalPrice = data.quantity * price;
-
-        totalamount += itemTotalPrice;
-
-        if (data.itemtype === "product") {
-          return {
-            cartid: data.cartid,
-            itemtype: "product",
-            quantity: data.quantity,
-            totalprice: itemTotalPrice,
-            productid: data.product.productid,
-            name: data.product.productname,
-            image: data.product.productimage || null,
-            price: data.product.price,
-            sellingprice: data.product.sellingprice,
-            categoryname: data.product.categoryname,
-          };
-        }
-
-        if (data.itemtype === "gift") {
-          return {
-            cartid: data.cartid,
-            itemtype: "gift",
-            quantity: data.quantity,
-            totalprice: itemTotalPrice,
-            giftid: data.product.productid,
-            name: data.product.productname,
-            image: data.product.productimage || null,
-            price: data.product.price,
-            sellingprice: data.product.sellingprice,
-            categoryname: data.product.categoryname,
-          };
-        }
-
-        return null;
-      })
-      .filter(Boolean);
+        })
+        .filter(Boolean),
+    );
 
     return res.status(200).json(
       new ApiResponse(
         200,
         {
-          cart: populatedCart,
+          cart: updatedCart,
+          giftcards: allGiftCards,
           totalamount: totalamount,
         },
         "Cart fetched successfully",
@@ -220,10 +237,11 @@ export const getCart = asyncHandler(async (req, res) => {
     throw error;
   }
 });
+
 export const updateCartQuantity = asyncHandler(async (req, res) => {
   try {
     const userid = req.user?.userid;
-    const { cartid, quantity } = req.body;
+    const { cartid, quantity, giftcardid } = req.body;
 
     if (!userid) throw new ApiError(401, "User not authenticated");
     if (!cartid) throw new ApiError(400, "Cart ID is required");
@@ -239,6 +257,15 @@ export const updateCartQuantity = asyncHandler(async (req, res) => {
     });
 
     if (!cartItem) throw new ApiError(404, "Cart item not found");
+
+    if (giftcardid !== 0 && giftcardid) {
+      const giftcard = await GiftcardModel.findOne({
+        where: { giftcardid: giftcardid },
+      });
+      if (!giftcard) {
+        throw new ApiError(400, "Gift card not found");
+      }
+    }
 
     if (parsedQuantity <= 0) {
       await cartItem.destroy();
@@ -290,6 +317,24 @@ export const removeFromCart = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, { message: "Item removed from cart" }));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const cartCount = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+
+    if (!userid) throw new ApiError(401, "User not authenticated");
+
+    const count = await CartModel.count({
+      where: { userid },
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, count, "Cart count fetched successfully"));
   } catch (error) {
     throw error;
   }

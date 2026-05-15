@@ -16,32 +16,15 @@ import { Op } from "sequelize";
 
 export const addThinamoruKural = asyncHandler(async (req, res) => {
   try {
-    const { kural, meaning, kuralid } = req.body;
+    const { kuralList } = req.body;
 
-    if (!kural || !meaning) {
-      throw new ApiError(400, "All fields are required");
+    if (!Array.isArray(kuralList)) {
+      throw new ApiError(400, "Kural list is required");
     }
 
-    if (kuralid) {
-      const existingKural = await ThinamOruKuralModel.findByPk(kuralid);
-
-      if (!existingKural) {
-        throw new ApiError(400, "Invalid Kural ID");
-      }
-
-      await existingKural.update({
-        kural: kural.trim(),
-        meaning: meaning.trim(),
-      });
-
-      return res
-        .status(200)
-        .json(new ApiResponse(200, "Kural Updated Successfully"));
-    }
-
-    const newKural = await ThinamOruKuralModel.create({
-      kural: kural.trim(),
-      meaning: meaning.trim(),
+    const result = ThinamOruKuralModel.bulkCreate(kuralList, {
+      validate: true,
+      ignoreDuplicates: true,
     });
 
     return res
@@ -54,7 +37,7 @@ export const addThinamoruKural = asyncHandler(async (req, res) => {
 
 export const getKural = asyncHandler(async (req, res) => {
   try {
-    const kural = await ThinamOruKuralModel.findOne();
+    const kural = await ThinamOruKuralModel.findAll();
     return res.status(200).json(new ApiResponse(200, kural));
   } catch (error) {
     throw error;
@@ -196,7 +179,12 @@ export const addNormalContactUs = asyncHandler(async (req, res) => {
 
 export const getNormalContactUs = asyncHandler(async (req, res) => {
   try {
+    const { type } = req.body;
+    if (!type) throw new ApiError(400, "Type is required");
     const contactUs = await ContactUsModel.findAll({
+      where: {
+        type: type,
+      },
       order: [["createdAt", "DESC"]],
     });
 
@@ -206,7 +194,7 @@ export const getNormalContactUs = asyncHandler(async (req, res) => {
   }
 });
 
-export const deleteNormalContactUs = asyncHandler(async (req, res) => {
+export const deleteContactUs = asyncHandler(async (req, res) => {
   try {
     const { contactid } = req.body;
 
@@ -244,40 +232,6 @@ export const addCorporateContactUs = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, "Message sent successfully"));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const getCorporateContactUs = asyncHandler(async (req, res) => {
-  try {
-    const contactUs = await ContactUsModel.findAll({
-      where: {
-        type: "corporate",
-      },
-      order: [["createdAt", "DESC"]],
-    });
-
-    return res.status(200).json(new ApiResponse(200, contactUs));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const deleteCorporateContactUs = asyncHandler(async (req, res) => {
-  try {
-    const { contactid } = req.body;
-
-    const contactUs = await ContactUsModel.destroy({
-      where: {
-        contactid: contactid,
-        type: "corporate",
-      },
-    });
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Message deleted successfully"));
   } catch (error) {
     throw error;
   }
@@ -335,6 +289,8 @@ export const getAllAppReviews = asyncHandler(async (req, res) => {
     const reviews = await TradizionsReviewModel.findAll({
       order: [["createdAt", "DESC"]],
     });
+
+    return res.status(200).json(new ApiResponse(200, reviews));
   } catch (error) {
     throw error;
   }
@@ -345,7 +301,7 @@ export const deleteAppReview = asyncHandler(async (req, res) => {
     const { reviewid } = req.body;
 
     if (!reviewid) {
-      throw new ApiError(400, "Review ID is required");
+      throw new ApiError(400, "Review Id is required");
     }
 
     const existingReview = await TradizionsReviewModel.findByPk(reviewid);
@@ -362,7 +318,7 @@ export const deleteAppReview = asyncHandler(async (req, res) => {
 
     return res
       .status(200)
-      .json(new ApiResponse(200, null, "Review Deleted Successfully"));
+      .json(new ApiResponse(200, "Review Deleted Successfully"));
   } catch (error) {
     throw error;
   }
@@ -385,7 +341,7 @@ export const getUserAppReviews = asyncHandler(async (req, res) => {
 
 export const activeAppReview = asyncHandler(async (req, res) => {
   try {
-    const { reviewid } = req.body;
+    const { reviewid, isActive } = req.body;
     if (!reviewid) {
       throw new ApiError(400, "Review ID is required");
     }
@@ -397,12 +353,12 @@ export const activeAppReview = asyncHandler(async (req, res) => {
     }
 
     await review.update({
-      isActive: true,
+      isActive: isActive,
     });
 
     return res
       .status(200)
-      .json(new ApiResponse(200, "Review Activated Successfully"));
+      .json(new ApiResponse(200, "Review update successfully"));
   } catch (error) {
     throw error;
   }

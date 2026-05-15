@@ -2,7 +2,6 @@ import { Model } from "sequelize";
 import { sequelize } from "../../connection.js";
 import { DataTypes } from "sequelize";
 import { BusinessModel } from "./business_model.js";
-import { AuthModel } from "./auth_model.js";
 
 class ProductModel extends Model {}
 
@@ -154,6 +153,44 @@ ProductModel.init(
   },
 );
 
+class GiftcardModel extends Model {}
+
+GiftcardModel.init(
+  {
+    giftcardid: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    bid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    cardname: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    cardprice: {
+      type: DataTypes.FLOAT,
+      allowNull: false,
+    },
+    cardimage: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    status: {
+      type: DataTypes.ENUM("active", "inactive"),
+      defaultValue: "active",
+    },
+  },
+  {
+    sequelize: sequelize,
+    tableName: "giftcards",
+    modelName: "GiftcardModel",
+    timestamps: false,
+  },
+);
+
 class ProductImagesModel extends Model {}
 
 ProductImagesModel.init(
@@ -216,9 +253,17 @@ ProductReviewModel.init(
     productid: {
       type: DataTypes.INTEGER,
       allowNull: false,
+    },
+    productname: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    bid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
       references: {
-        model: ProductModel,
-        key: "productid",
+        model: BusinessModel,
+        key: "bid",
       },
     },
     name: {
@@ -261,11 +306,7 @@ ProductReviewModel.init(
   },
 );
 
-export { ProductModel, ProductImagesModel, ProductReviewModel };
-
-ProductReviewModel.belongsTo(AuthModel, { foreignKey: "userid", as: "user" });
-
-AuthModel.hasMany(ProductReviewModel, { foreignKey: "userid" });
+export { ProductModel, ProductImagesModel, ProductReviewModel ,GiftcardModel};
 
 ProductModel.hasMany(ProductImagesModel, {
   foreignKey: "productid",

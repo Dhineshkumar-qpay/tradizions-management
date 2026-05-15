@@ -100,6 +100,7 @@ export const getAllProducts = asyncHandler(async (req, res) => {
         exclude: ["createdAt", "updatedAt"],
       },
       order,
+      isActive: true,
       limit: Number(limit),
       offset: Number(offset),
     });
@@ -361,61 +362,4 @@ export const giftDetails = asyncHandler(async (req, res) => {
       totalreviews: productReviews.length,
     }),
   );
-});
-// --------------------------- Reviews ---------------------------
-
-export const addProductRating = asyncHandler(async (req, res) => {
-  try {
-    const userid = req.user?.userid;
-
-    const { review, rating, productid, title, email, name } = req.body;
-
-    const existingReview = await ProductReviewModel.findOne({
-      where: {
-        userid,
-        productid,
-      },
-    });
-    if (existingReview) {
-      await existingReview.update({
-        review,
-        rating,
-        title,
-        email,
-        name,
-      });
-    } else {
-      await ProductReviewModel.create({
-        review,
-        rating,
-        userid,
-        productid,
-        title,
-        email,
-        name,
-      });
-    }
-    return res.status(200).json(new ApiResponse(200, "rating submitted"));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const deleteRating = asyncHandler(async (req, res) => {
-  try {
-    const { userid, productid } = req.body;
-    const review = await ProductReviewModel.findOne({
-      where: {
-        userid,
-        productid,
-      },
-    });
-    if (!review) {
-      throw new ApiError(400, "Review not found");
-    }
-    await review.destroy();
-    return res.status(200).json(new ApiResponse(200, "Review deleted"));
-  } catch (error) {
-    throw error;
-  }
 });

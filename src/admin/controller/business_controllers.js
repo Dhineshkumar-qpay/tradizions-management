@@ -13,20 +13,66 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 import fs from "fs";
 import { sequelize } from "../../../connection.js";
 import { ProductModel } from "../../model/product_gift_model.js";
+import { AuthModel } from "../../model/auth_model.js";
 
 export const addBusiness = asyncHandler(async (req, res) => {
   try {
-    const userid = req.user?.userid;
-    const { businessname, description } = req.body;
+    const { username, phone, businessname, description, email } = req.body;
 
-    if (!businessname?.trim() || !description?.trim()) {
-      throw new ApiError(400, "Business name and description are required");
+    if (!username) {
+      throw new ApiError(400, "Username is required");
+    }
+
+    if (!phone) {
+      throw new ApiError(400, "Phone is required");
+    }
+
+    if (!businessname) {
+      throw new ApiError(400, "Business name is required");
+    }
+
+    if (!description) {
+      throw new ApiError(400, "Description is required");
+    }
+
+    if (!email) {
+      throw new ApiError(400, "Email is required");
+    }
+
+    let user = await AuthModel.findOne({
+      where: {
+        phone,
+      },
+    });
+
+    if (user) throw new ApiError(400, "User already exists with same phone");
+
+    if (!user) {
+      user = await AuthModel.create({
+        username: username.trim(),
+        phone: phone.trim(),
+        role: "user",
+      });
+    }
+
+    const existingBusiness = await BusinessModel.findOne({
+      where: {
+        userid: user.userid,
+        businessname,
+      },
+    });
+
+    if (existingBusiness) {
+      throw new ApiError(400, "Business already exists");
     }
 
     const business = await BusinessModel.create({
+      userid: user.userid,
+      username: username.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
       businessname: businessname.trim(),
       description: description.trim(),
-      userid: userid,
     });
 
     if (!business) {
@@ -74,6 +120,47 @@ export const deleteBusiness = asyncHandler(async (req, res) => {
   }
 });
 
+export const activeBusinessStatus = asyncHandler(async (req, res) => {
+  try {
+    const { bid, status } = req.body;
+
+    if (!bid) {
+      throw new ApiError(400, "Business ID is required");
+    }
+
+    if (!status) {
+      throw new ApiError(400, "Status is required");
+    }
+
+    const existingBusiness = await BusinessModel.findByPk(bid);
+
+    if (!existingBusiness) {
+      throw new ApiError(404, "Business not found");
+    }
+
+    await existingBusiness.update({
+      status,
+    });
+
+    await ProductModel.update(
+      {
+        isActive: status === "active",
+      },
+      {
+        where: {
+          bid,
+        },
+      },
+    );
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, `Business status updated successfully`));
+  } catch (error) {
+    throw error;
+  }
+});
+
 export const getAllBusiness = asyncHandler(async (req, res) => {
   try {
     const businesses = await BusinessModel.findAll({
@@ -105,33 +192,7 @@ export const getTotalBusiness = asyncHandler(async (req, res) => {
   }
 });
 
-export const verifyBusiness = asyncHandler(async (req, res) => {
-  try {
-    const { bid, verified } = req.body;
 
-    if (!bid || typeof verified !== "boolean") {
-      throw new ApiError(
-        400,
-        "Business ID and verified (boolean) are required",
-      );
-    }
-
-    const business = await BusinessModel.findByPk(bid);
-
-    if (!business) {
-      throw new ApiError(404, "Business not found");
-    }
-
-    business.verified = verified;
-    await business.save();
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Business updated successfully"));
-  } catch (error) {
-    throw error;
-  }
-});
 
 /* ------------------ Business Onboard ------------------ */
 

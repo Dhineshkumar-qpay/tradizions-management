@@ -44,6 +44,9 @@ const storage = multer.diskStorage({
         uploadPath = "./uploads/banner/";
         break;
 
+      case "cardimage":
+        uploadPath = "./uploads/giftcards/";
+
       default:
         uploadPath = "./uploads/";
         break;

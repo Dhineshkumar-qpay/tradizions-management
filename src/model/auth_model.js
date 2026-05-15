@@ -10,28 +10,23 @@ AuthModel.init(
       autoIncrement: true,
       primaryKey: true,
     },
-
     profileimage: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-
     email: {
       type: DataTypes.STRING,
       allowNull: true,
       unique: true,
     },
-
     otp: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-
     otp_expires_at: {
       type: DataTypes.DATE,
       allowNull: true,
     },
-
     username: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -39,15 +34,9 @@ AuthModel.init(
         len: [2, 100],
       },
     },
-
     phone: {
       type: DataTypes.STRING,
-      allowNull: true,
-      unique: true,
-      validate: {
-        isNumeric: true,
-        len: [10, 10],
-      },
+      allowNull: false,
     },
     role: {
       type: DataTypes.ENUM("admin", "user"),

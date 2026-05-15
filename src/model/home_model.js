@@ -14,10 +14,12 @@ ThinamOruKuralModel.init(
     kural: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     },
     meaning: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique:true
     },
   },
   {

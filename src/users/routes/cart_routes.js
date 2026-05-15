@@ -5,6 +5,7 @@ import {
   getCart,
   updateCartQuantity,
   removeFromCart,
+  cartCount,
 } from "../controller/cart_controller.js";
 
 const router = express.Router();
@@ -13,5 +14,6 @@ router.post("/cart/addtocart", verifyToken, addToCart);
 router.post("/cart/getcart", verifyToken, getCart);
 router.post("/cart/update-quantity", verifyToken, updateCartQuantity);
 router.post("/cart/remove", verifyToken, removeFromCart);
+router.post("/cart/cart-count", verifyToken, cartCount);
 
 export default router;

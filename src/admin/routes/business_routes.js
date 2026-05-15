@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  activeBusinessStatus,
   addAddressInfo,
   addBank,
   addBasicInfo,
@@ -15,7 +16,6 @@ import {
   getKyc,
   getTotalBusiness,
   updateKyc,
-  verifyBusiness,
 } from "../controller/business_controllers.js";
 import { adminOnly, verifyToken } from "../../middleware/auth_middleware.js";
 import { upload } from "../../middleware/multer_middleware.js";
@@ -25,9 +25,14 @@ const router = express.Router();
 router.post("/admin/businesses", verifyToken, getTotalBusiness);
 
 router.post("/business/addbusiness", verifyToken, addBusiness);
+router.post(
+  "/business/active-business",
+  verifyToken,
+  adminOnly,
+  activeBusinessStatus,
+);
 router.post("/business/deletebusiness", verifyToken, deleteBusiness);
 router.post("/business/getallbusiness", verifyToken, getAllBusiness);
-router.post("/business/verify", verifyToken, adminOnly, verifyBusiness);
 
 // Basic Deatils
 router.post("/business/addbasicinfo", verifyToken, addBasicInfo);
@@ -67,7 +72,7 @@ router.post(
 router.post("/business/getkycinfo", verifyToken, getKyc);
 
 router.post(
-  "/business/addbank",
+  "/business/addbankinfo",
   verifyToken,
   upload.single("passbook"),
   addBank,
