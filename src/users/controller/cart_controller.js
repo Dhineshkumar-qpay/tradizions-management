@@ -156,8 +156,6 @@ export const getCart = asyncHandler(async (req, res) => {
 
     let totalamount = 0;
 
-    let allGiftCards = [];
-
     const updatedCart = await Promise.all(
       cartItems
         .map(async (item) => {
@@ -167,23 +165,29 @@ export const getCart = asyncHandler(async (req, res) => {
             return null;
           }
 
-          const bids = [data.bid];
+          let giftCards;
+          let giftCard;
+          let cardPrice = 0;
 
           if (data.itemtype === "gift") {
-            const giftCards = await GiftcardModel.findAll({
+            giftCards = await GiftcardModel.findAll({
               where: {
-                bid: bids,
+                bid: data.bid,
               },
             });
 
-            allGiftCards.push(...giftCards);
+            giftCard = await GiftcardModel.findByPk(data.giftcardid);
           }
 
           const price =
             parseFloat(data.product.sellingprice) ||
             parseFloat(data.product.price);
 
-          const itemTotalPrice = data.quantity * price;
+          if (data.itemtype === "gift" && giftCard) {
+            cardPrice = parseFloat(giftCard.cardprice);
+          }
+
+          const itemTotalPrice = data.quantity * price + cardPrice;
 
           totalamount += itemTotalPrice;
 
@@ -208,12 +212,14 @@ export const getCart = asyncHandler(async (req, res) => {
               itemtype: "gift",
               quantity: data.quantity,
               totalprice: itemTotalPrice,
+              giftcardid: data.giftcardid || 0,
               giftid: data.product.productid,
               name: data.product.productname,
               image: data.product.productimage || null,
               price: data.product.price,
               sellingprice: data.product.sellingprice,
               categoryname: data.product.categoryname,
+              giftcard: giftCards,
             };
           }
 
@@ -227,7 +233,6 @@ export const getCart = asyncHandler(async (req, res) => {
         200,
         {
           cart: updatedCart,
-          giftcards: allGiftCards,
           totalamount: totalamount,
         },
         "Cart fetched successfully",
@@ -238,10 +243,59 @@ export const getCart = asyncHandler(async (req, res) => {
   }
 });
 
+export const selectGiftCard = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+
+    const { cartid, giftcardid } = req.body;
+
+    if (!cartid) {
+      throw new ApiError(400, "Cart ID is required");
+    }
+
+    const cart = await CartModel.findOne({
+      where: {
+        cartid,
+        userid,
+      },
+    });
+
+    if (!cart) {
+      throw new ApiError(404, "Cart not found");
+    }
+
+    if (parseInt(giftcardid) === 0) {
+      cart.giftcardid = null;
+
+      await cart.save();
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, "Gift card removed successfully"));
+    }
+
+    const existingGiftCard = await GiftcardModel.findByPk(giftcardid);
+
+    if (!existingGiftCard) {
+      throw new ApiError(404, "Gift card not found");
+    }
+
+    cart.giftcardid = giftcardid;
+
+    await cart.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Gift card added successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
 export const updateCartQuantity = asyncHandler(async (req, res) => {
   try {
     const userid = req.user?.userid;
-    const { cartid, quantity, giftcardid } = req.body;
+    const { cartid, quantity } = req.body;
 
     if (!userid) throw new ApiError(401, "User not authenticated");
     if (!cartid) throw new ApiError(400, "Cart ID is required");
@@ -257,15 +311,6 @@ export const updateCartQuantity = asyncHandler(async (req, res) => {
     });
 
     if (!cartItem) throw new ApiError(404, "Cart item not found");
-
-    if (giftcardid !== 0 && giftcardid) {
-      const giftcard = await GiftcardModel.findOne({
-        where: { giftcardid: giftcardid },
-      });
-      if (!giftcard) {
-        throw new ApiError(400, "Gift card not found");
-      }
-    }
 
     if (parsedQuantity <= 0) {
       await cartItem.destroy();
@@ -335,6 +380,116 @@ export const cartCount = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, count, "Cart count fetched successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const emptyCart = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+
+    if (!userid) throw new ApiError(401, "User not authenticated");
+
+    await CartModel.destroy({
+      where: { userid },
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Cart emptied successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const checkoutDetail = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+
+    const cartItems = await CartModel.findAll({
+      where: { userid },
+      include: [
+        {
+          model: ProductModel,
+          as: "product",
+          required: false,
+        },
+      ],
+    });
+    let totalamount = 0;
+
+    const updatedCart = await Promise.all(
+      cartItems
+        .map(async (item) => {
+          const data = item.toJSON();
+
+          if (!data.product) {
+            return null;
+          }
+
+          let giftCard;
+          let cardPrice = 0;
+
+          if (data.itemtype === "gift") {
+            giftCard = await GiftcardModel.findByPk(data.giftcardid);
+          }
+
+          const price =
+            parseFloat(data.product.sellingprice) ||
+            parseFloat(data.product.price);
+
+          if (data.itemtype === "gift" && giftCard) {
+            cardPrice = parseFloat(giftCard.cardprice);
+          }
+
+          const itemTotalPrice = data.quantity * price + cardPrice;
+
+          totalamount += itemTotalPrice;
+
+          if (data.itemtype === "product") {
+            return {
+              cartid: data.cartid,
+              itemtype: "product",
+              quantity: data.quantity,
+              totalprice: itemTotalPrice,
+              productid: data.product.productid,
+              name: data.product.productname,
+              image: data.product.productimage || null,
+              price: data.product.price,
+              sellingprice: data.product.sellingprice,
+              categoryname: data.product.categoryname,
+            };
+          }
+
+          if (data.itemtype === "gift") {
+            return {
+              cartid: data.cartid,
+              itemtype: "gift",
+              quantity: data.quantity,
+              totalprice: itemTotalPrice,
+              giftcardid: data.giftcardid || 0,
+              giftid: data.product.productid,
+              name: data.product.productname,
+              image: data.product.productimage || null,
+              price: data.product.price,
+              sellingprice: data.product.sellingprice,
+              categoryname: data.product.categoryname,
+              giftcard: giftCard,
+            };
+          }
+
+          return null;
+        })
+        .filter(Boolean),
+    );
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        products: updatedCart,
+        totalamount: totalamount,
+      }),
+    );
   } catch (error) {
     throw error;
   }

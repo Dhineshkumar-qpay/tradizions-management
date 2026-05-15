@@ -55,6 +55,7 @@ export const getHomeProducts = asyncHandler(async (req, res) => {
     "categoryid",
     "subcategoryid",
     "price",
+    "availablestock",
     "sellingprice",
     "isFavourite",
   ];
