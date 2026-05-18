@@ -202,6 +202,116 @@ export const getProductDetail = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, updatedData));
 });
 
+
+export const getHomeProducts = asyncHandler(async (req, res) => {
+  const attributes = [
+    "productid",
+    "bid",
+    "productimage",
+    "productname",
+    "categoryid",
+    "subcategoryid",
+    "price",
+    "availablestock",
+    "sellingprice",
+    "isFavourite",
+  ];
+  try {
+    const [featuredProducts, newArrivalProducts, giftHampers, poojaHampers] =
+      await Promise.all([
+        ProductModel.findAll({
+          where: {
+            isFeatured: true,
+            itemtype: "product",
+          },
+          order: [["createdAt", "DESC"]],
+          attributes: attributes,
+          limit: 10,
+        }),
+
+        ProductModel.findAll({
+          where: {
+            itemtype: "product",
+          },
+          order: [["createdAt", "DESC"]],
+          attributes: attributes,
+          limit: 10,
+        }),
+
+        ProductModel.findAll({
+          where: {
+            itemtype: "gift",
+            gifttype: "nuts",
+          },
+          order: [["createdAt", "DESC"]],
+          attributes: attributes,
+          limit: 10,
+        }),
+
+        ProductModel.findAll({
+          where: {
+            itemtype: "gift",
+            gifttype: "pooja",
+          },
+          order: [["createdAt", "DESC"]],
+          attributes: attributes,
+          limit: 10,
+        }),
+      ]);
+
+    const updatedHomeProducts = {
+      featured: featuredProducts,
+      newarrivals: newArrivalProducts,
+      gifthampers: giftHampers,
+      poojahampers: poojaHampers,
+    };
+
+    return res.status(200).json(new ApiResponse(200, updatedHomeProducts));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const searchProducts = asyncHandler(async (req, res) => {
+  try {
+    const { search } = req.body;
+
+    if (!search) {
+      return res.status(200).json(new ApiResponse(200, []));
+    }
+
+    const products = await ProductModel.findAll({
+      where: {
+        [Op.or]: [
+          {
+            productname: {
+              [Op.like]: `%${search}%`,
+            },
+          },
+        ],
+      },
+      
+      attributes: [
+        "productid",
+        "bid",
+        "productimage",
+        "productname",
+        "categoryid",
+        "subcategoryid",
+        "price",
+        "sellingprice",
+        "isFavourite",
+      ],
+      limit: 10,
+    });
+
+    return res.status(200).json(new ApiResponse(200, products));
+  } catch (error) {
+    throw error;
+  }
+});
+
+
 // ---------------------------Gift Detail ---------------------------
 
 export const getAllGifts = asyncHandler(async (req, res) => {

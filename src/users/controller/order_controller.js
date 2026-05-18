@@ -323,6 +323,46 @@ export const orderDetails = asyncHandler(async (req, res) => {
   }
 });
 
+// ------------------------ User Orders ------------------------
+
+export const getAlluserOrders = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+
+    const orders = await OrderModel.findAll({
+      where: { userid },
+      include: [
+        {
+          model: OrderItemModel,
+          as: "items",
+          include: [
+            {
+              model: ProductModel,
+              as: "product",
+              attributes: ["productid", "productname", "productimage"],
+            },
+            {
+              model: GiftcardModel,
+              as: "giftcard",
+              attributes: ["giftcardid", "cardname", "cardimage"],
+            },
+            {
+              model: AddressModel,
+              as: "address",
+              attributes: ["addressline", "city", "pincode"],
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    return res.status(200).json(new ApiResponse(200, orders));
+  } catch (error) {
+    throw error;
+  }
+});
+
 // ------------------------ Merchant Orders ------------------------
 
 export const getMerchantOrders = asyncHandler(async (req, res) => {
@@ -333,11 +373,8 @@ export const getMerchantOrders = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Business id is required");
     }
 
-    const orders = await OrderItemModel.findAll({
+    const ordersItems = await OrderItemModel.findAll({
       where: { bid },
-      attributes: {
-        exclude: ["createdAt", "updatedAt"],
-      },
       include: [
         {
           model: OrderModel,
@@ -347,12 +384,13 @@ export const getMerchantOrders = asyncHandler(async (req, res) => {
         {
           model: ProductModel,
           as: "product",
-          attributes: ["productid", "productname", "productimage"],
+          attributes: ["productid", "productname", "productimage", "itemtype"],
         },
         {
           model: AddressModel,
           as: "address",
           attributes: [
+            "addressid",
             "addressline",
             "landmark",
             "city",
@@ -367,9 +405,63 @@ export const getMerchantOrders = asyncHandler(async (req, res) => {
           attributes: ["username", "email", "phone"],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
 
-    return res.status(200).json(new ApiResponse(200, orders));
+    const updatedOrderItems = await Promise.all(
+      ordersItems.map(async (item) => {
+        let giftDetails = {};
+
+        const order = item.order.dataValues;
+        const product = item.product.dataValues;
+        const { user, address } = item.dataValues;
+
+        const [year, month, day] = item.createdAt
+          .toISOString()
+          .split("T")[0]
+          .split("-");
+
+        const formatedDate = `${day}-${month}-${year}`;
+
+        if (item.giftcardid) {
+          giftDetails = await GiftcardModel.findOne({
+            where: { giftcardid: item.giftcardid },
+          });
+        }
+
+        return {
+          orderid: order.orderid,
+          orderitemid: item.orderitemid,
+          userid: order.userid,
+          orderstatus: order.orderstatus,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          itemtype: product.itemtype,
+          productname: product.productname,
+          productimage: product.productimage,
+          quantity: item.quantity,
+          price: item.price,
+          addressid: address.addressid,
+          addressline: address.addressline,
+          landmark: address.landmark,
+          city: address.city,
+          district: address.district,
+          state: address.state,
+          pincode: address.pincode,
+          totalprice: item.totalprice,
+          itemstatus: item.itemstatus,
+          giftcardid: giftDetails.giftcardid || 0,
+          giftcardname: giftDetails.cardname,
+          giftcardimage: giftDetails.cardimage || null,
+          giftcardprice: giftDetails.cardprice || null,
+          giftmessage: item.giftmessage || null,
+          odredate: formatedDate,
+        };
+      }),
+    );
+
+    return res.status(200).json(new ApiResponse(200, updatedOrderItems));
   } catch (error) {
     throw error;
   }

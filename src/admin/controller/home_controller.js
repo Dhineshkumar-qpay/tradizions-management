@@ -13,6 +13,7 @@ import {
 } from "../../model/product_gift_model.js";
 import { type } from "os";
 import { Op } from "sequelize";
+import { OrderItemModel } from "../../model/order_model.js";
 
 export const addThinamoruKural = asyncHandler(async (req, res) => {
   try {
@@ -39,200 +40,6 @@ export const getKural = asyncHandler(async (req, res) => {
   try {
     const kural = await ThinamOruKuralModel.findAll();
     return res.status(200).json(new ApiResponse(200, kural));
-  } catch (error) {
-    throw error;
-  }
-});
-
-/* ---------------- Home Products ------------------ */
-
-export const getHomeProducts = asyncHandler(async (req, res) => {
-  const attributes = [
-    "productid",
-    "bid",
-    "productimage",
-    "productname",
-    "categoryid",
-    "subcategoryid",
-    "price",
-    "availablestock",
-    "sellingprice",
-    "isFavourite",
-  ];
-  try {
-    const [featuredProducts, newArrivalProducts, giftHampers, poojaHampers] =
-      await Promise.all([
-        ProductModel.findAll({
-          where: {
-            isFeatured: true,
-            itemtype: "product",
-          },
-          order: [["createdAt", "DESC"]],
-          attributes: attributes,
-          limit: 10,
-        }),
-
-        ProductModel.findAll({
-          where: {
-            itemtype: "product",
-          },
-          order: [["createdAt", "DESC"]],
-          attributes: attributes,
-          limit: 10,
-        }),
-
-        ProductModel.findAll({
-          where: {
-            itemtype: "gift",
-            gifttype: "nuts",
-          },
-          order: [["createdAt", "DESC"]],
-          attributes: attributes,
-          limit: 10,
-        }),
-
-        ProductModel.findAll({
-          where: {
-            itemtype: "gift",
-            gifttype: "pooja",
-          },
-          order: [["createdAt", "DESC"]],
-          attributes: attributes,
-          limit: 10,
-        }),
-      ]);
-
-    const updatedHomeProducts = {
-      featured: featuredProducts,
-      newarrivals: newArrivalProducts,
-      gifthampers: giftHampers,
-      poojahampers: poojaHampers,
-    };
-
-    return res.status(200).json(new ApiResponse(200, updatedHomeProducts));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const searchProducts = asyncHandler(async (req, res) => {
-  try {
-    const { search } = req.body;
-
-    if (!search) {
-      return res.status(200).json(new ApiResponse(200, []));
-    }
-
-    const products = await ProductModel.findAll({
-      where: {
-        [Op.or]: [
-          {
-            productname: {
-              [Op.like]: `%${search}%`,
-            },
-          },
-        ],
-      },
-      attributes: [
-        "productid",
-        "bid",
-        "productimage",
-        "productname",
-        "categoryid",
-        "subcategoryid",
-        "price",
-        "sellingprice",
-        "isFavourite",
-      ],
-      limit: 10,
-    });
-
-    return res.status(200).json(new ApiResponse(200, products));
-  } catch (error) {
-    throw error;
-  }
-});
-
-/* ---------------- Contact Us ------------------ */
-
-export const addNormalContactUs = asyncHandler(async (req, res) => {
-  try {
-    const { name, email, phone, description } = req.body;
-
-    if (!name || !email || !phone || !description) {
-      throw new ApiError(400, "All fields are required");
-    }
-
-    const contactUs = await ContactUsModel.create({
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone,
-      description: description.trim(),
-    });
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Message sent successfully"));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const getNormalContactUs = asyncHandler(async (req, res) => {
-  try {
-    const { type } = req.body;
-    if (!type) throw new ApiError(400, "Type is required");
-    const contactUs = await ContactUsModel.findAll({
-      where: {
-        type: type,
-      },
-      order: [["createdAt", "DESC"]],
-    });
-
-    return res.status(200).json(new ApiResponse(200, contactUs));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const deleteContactUs = asyncHandler(async (req, res) => {
-  try {
-    const { contactid } = req.body;
-
-    const contactUs = await ContactUsModel.destroy({
-      where: {
-        contactid: contactid,
-      },
-    });
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Message deleted successfully"));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const addCorporateContactUs = asyncHandler(async (req, res) => {
-  try {
-    const { name, email, phone, description, quantity } = req.body;
-
-    if (!name || !email || !phone || !description) {
-      throw new ApiError(400, "All fields are required");
-    }
-
-    const contactUs = await ContactUsModel.create({
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone,
-      description: description.trim(),
-      type: "corporate",
-      quantity: quantity,
-    });
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Message sent successfully"));
   } catch (error) {
     throw error;
   }
@@ -360,6 +167,119 @@ export const activeAppReview = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, "Review update successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+// -------------------- Home Product --------------------
+
+export const getMerchantDashboardCounts = asyncHandler(async (req, res) => {
+  try {
+    const { bid } = req.body;
+    if (!bid) throw new ApiError(400, "Business id is required");
+
+    const [totalProducts, totalOrders] = await Promise.all([
+      await ProductModel.count({
+        where: {
+          bid: bid,
+        },
+      }),
+      await OrderItemModel.count({
+        where: {
+          bid: bid,
+        },
+      }),
+    ]);
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        totalproducts: totalProducts,
+        totalorders: totalOrders,
+      }),
+    );
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getProductStocks = asyncHandler(async (req, res) => {
+  try {
+    const { bid } = req.body;
+
+    const attributes = [
+      "productid",
+      "bid",
+      "productname",
+      "productimage",
+      "availablestock",
+      "price",
+      "sellingprice",
+    ];
+
+    const [inStockProducts, lowStockProducts, outofstockProdcuts] =
+      await Promise.all([
+        await ProductModel.findAll({
+          where: {
+            bid: bid,
+            availablestock: {
+              [Op.gt]: 10,
+            },
+          },
+          attributes: attributes,
+        }),
+        await ProductModel.findAll({
+          where: {
+            bid: bid,
+            availablestock: {
+              [Op.gt]: 0,
+              [Op.lte]: 10,
+            },
+          },
+          attributes: attributes,
+        }),
+        await ProductModel.findAll({
+          where: {
+            bid: bid,
+            availablestock: 0,
+          },
+          attributes: attributes,
+        }),
+      ]);
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        instock: inStockProducts,
+        lowstock: lowStockProducts,
+        outofstock: outofstockProdcuts,
+      }),
+    );
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const updateProductStock = asyncHandler(async (req, res) => {
+  try {
+    const { productid, bid, availablestock } = req.body;
+    if (!productid || !bid || !availablestock) {
+      throw new ApiError(400, "Product id, business id and stock is required");
+    }
+
+    const product = await ProductModel.findOne({
+      where: {
+        productid: productid,
+        bid: bid,
+      },
+    });
+
+    if (!product) throw new ApiError(400, "Product not found");
+    await product.update({
+      availablestock: availablestock,
+    });
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Stock updated successfully"));
   } catch (error) {
     throw error;
   }

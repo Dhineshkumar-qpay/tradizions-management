@@ -161,79 +161,84 @@ export const getCart = asyncHandler(async (req, res) => {
 
     let totalamount = 0;
 
-    const updatedCart = await Promise.all(
-      cartItems
-        .map(async (item) => {
-          const data = item.toJSON();
+    const businessIds = [...new Set(cartItems.map(item => item.bid))];
+    const giftCardIds = cartItems.map(item => item.giftcardid).filter(Boolean);
 
-          if (!data.product) {
-            return null;
-          }
+    const [allGiftCards, selectedGiftCards] = await Promise.all([
+      GiftcardModel.findAll({ where: { bid: businessIds } }),
+      GiftcardModel.findAll({ where: { giftcardid: giftCardIds } })
+    ]);
 
-          let giftCards;
-          let giftCard;
-          let cardPrice = 0;
+    const giftCardsByBusiness = allGiftCards.reduce((acc, card) => {
+      if (!acc[card.bid]) acc[card.bid] = [];
+      acc[card.bid].push(card);
+      return acc;
+    }, {});
 
-          if (data.itemtype === "gift") {
-            giftCards = await GiftcardModel.findAll({
-              where: {
-                bid: data.bid,
-              },
-            });
+    const selectedGiftCardsMap = selectedGiftCards.reduce((acc, card) => {
+      acc[card.giftcardid] = card;
+      return acc;
+    }, {});
 
-            giftCard = await GiftcardModel.findByPk(data.giftcardid);
-          }
+    const updatedCart = cartItems.map((item) => {
+      const data = item.toJSON();
 
-          const price =
-            parseFloat(data.product.sellingprice) ||
-            parseFloat(data.product.price);
+      if (!data.product) {
+        return null;
+      }
 
-          if (data.itemtype === "gift" && giftCard) {
-            cardPrice = parseFloat(giftCard.cardprice);
-          }
+      let cardPrice = 0;
+      const giftCards = giftCardsByBusiness[data.bid] || [];
+      const giftCard = selectedGiftCardsMap[data.giftcardid];
 
-          const itemTotalPrice = data.quantity * price + cardPrice;
+      const price =
+        parseFloat(data.product.sellingprice) ||
+        parseFloat(data.product.price);
 
-          totalamount += itemTotalPrice;
+      if (data.itemtype === "gift" && giftCard) {
+        cardPrice = parseFloat(giftCard.cardprice);
+      }
 
-          if (data.itemtype === "product") {
-            return {
-              cartid: data.cartid,
-              itemtype: "product",
-              quantity: data.quantity,
-              totalprice: itemTotalPrice,
-              productid: data.product.productid,
-              name: data.product.productname,
-              image: data.product.productimage || null,
-              price: data.product.price,
-              sellingprice: data.product.sellingprice,
-              categoryname: data.product.categoryname,
-            };
-          }
+      const itemTotalPrice = data.quantity * price + cardPrice;
 
-          if (data.itemtype === "gift") {
-            return {
-              cartid: data.cartid,
-              itemtype: "gift",
-              quantity: data.quantity,
-              totalprice: itemTotalPrice,
-              giftcardid: data.giftcardid || 0,
-              giftmessage: data.giftmessage || "",
-              giftcardprice:cardPrice,
-              giftid: data.product.productid,
-              name: data.product.productname,
-              image: data.product.productimage || null,
-              price: data.product.price,
-              sellingprice: data.product.sellingprice,
-              categoryname: data.product.categoryname,
-              giftcard: giftCards,
-            };
-          }
+      totalamount += itemTotalPrice;
 
-          return null;
-        })
-        .filter(Boolean),
-    );
+      if (data.itemtype === "product") {
+        return {
+          cartid: data.cartid,
+          itemtype: "product",
+          quantity: data.quantity,
+          totalprice: itemTotalPrice,
+          productid: data.product.productid,
+          name: data.product.productname,
+          image: data.product.productimage || null,
+          price: data.product.price,
+          sellingprice: data.product.sellingprice,
+          categoryname: data.product.categoryname,
+        };
+      }
+
+      if (data.itemtype === "gift") {
+        return {
+          cartid: data.cartid,
+          itemtype: "gift",
+          quantity: data.quantity,
+          totalprice: itemTotalPrice,
+          giftcardid: data.giftcardid || 0,
+          giftmessage: data.giftmessage || "",
+          giftcardprice: cardPrice,
+          giftid: data.product.productid,
+          name: data.product.productname,
+          image: data.product.productimage || null,
+          price: data.product.price,
+          sellingprice: data.product.sellingprice,
+          categoryname: data.product.categoryname,
+          giftcard: giftCards,
+        };
+      }
+
+      return null;
+    }).filter(Boolean);
 
     return res.status(200).json(
       new ApiResponse(200, {
@@ -421,70 +426,71 @@ export const checkoutDetail = asyncHandler(async (req, res) => {
 
     let totalamount = 0;
 
-    const updatedCart = await Promise.all(
-      cartItems
-        .map(async (item) => {
-          const data = item.toJSON();
+    const giftCardIds = cartItems.map(item => item.giftcardid).filter(Boolean);
+    const selectedGiftCards = await GiftcardModel.findAll({
+      where: { giftcardid: giftCardIds }
+    });
+    const selectedGiftCardsMap = selectedGiftCards.reduce((acc, card) => {
+      acc[card.giftcardid] = card;
+      return acc;
+    }, {});
 
-          if (!data.product) {
-            return null;
-          }
+    const updatedCart = cartItems.map((item) => {
+      const data = item.toJSON();
 
-          let giftCard;
-          let cardPrice = 0;
+      if (!data.product) {
+        return null;
+      }
 
-          if (data.itemtype === "gift") {
-            giftCard = await GiftcardModel.findByPk(data.giftcardid);
-          }
+      let cardPrice = 0;
+      const giftCard = selectedGiftCardsMap[data.giftcardid];
 
-          const price =
-            parseFloat(data.product.sellingprice) ||
-            parseFloat(data.product.price);
+      const price =
+        parseFloat(data.product.sellingprice) ||
+        parseFloat(data.product.price);
 
-          if (data.itemtype === "gift" && giftCard) {
-            cardPrice = parseFloat(giftCard.cardprice);
-          }
+      if (data.itemtype === "gift" && giftCard) {
+        cardPrice = parseFloat(giftCard.cardprice);
+      }
 
-          const itemTotalPrice = data.quantity * price + cardPrice;
+      const itemTotalPrice = data.quantity * price + cardPrice;
 
-          totalamount += itemTotalPrice;
+      totalamount += itemTotalPrice;
 
-          if (data.itemtype === "product") {
-            return {
-              cartid: data.cartid,
-              itemtype: "product",
-              quantity: data.quantity,
-              totalprice: itemTotalPrice,
-              productid: data.product.productid,
-              name: data.product.productname,
-              image: data.product.productimage || null,
-              price: data.product.price,
-              sellingprice: data.product.sellingprice,
-              categoryname: data.product.categoryname,
-            };
-          }
+      if (data.itemtype === "product") {
+        return {
+          cartid: data.cartid,
+          itemtype: "product",
+          quantity: data.quantity,
+          totalprice: itemTotalPrice,
+          productid: data.product.productid,
+          name: data.product.productname,
+          image: data.product.productimage || null,
+          price: data.product.price,
+          sellingprice: data.product.sellingprice,
+          categoryname: data.product.categoryname,
+        };
+      }
 
-          if (data.itemtype === "gift") {
-            return {
-              cartid: data.cartid,
-              itemtype: "gift",
-              quantity: data.quantity,
-              totalprice: itemTotalPrice,
-              giftcardid: data.giftcardid || 0,
-              giftid: data.product.productid,
-              name: data.product.productname,
-              image: data.product.productimage || null,
-              price: data.product.price,
-              sellingprice: data.product.sellingprice,
-              categoryname: data.product.categoryname,
-              giftcard: giftCard,
-            };
-          }
+      if (data.itemtype === "gift") {
+        return {
+          cartid: data.cartid,
+          itemtype: "gift",
+          quantity: data.quantity,
+          totalprice: itemTotalPrice,
+          giftcardid: data.giftcardid || 0,
+          giftid: data.product.productid,
+          name: data.product.productname,
+          image: data.product.productimage || null,
+          price: data.product.price,
+          sellingprice: data.product.sellingprice,
+          categoryname: data.product.categoryname,
+          giftcard: giftCard,
+        };
+      }
 
-          return null;
-        })
-        .filter(Boolean),
-    );
+      return null;
+    }).filter(Boolean);
 
     return res.status(200).json(
       new ApiResponse(200, {
