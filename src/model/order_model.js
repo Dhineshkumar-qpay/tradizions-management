@@ -24,11 +24,7 @@ OrderModel.init(
     },
     addressid: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: AddressModel,
-        key: "addressid",
-      },
+      defaultValue: 0,
     },
     totalamount: {
       type: DataTypes.DECIMAL(10, 2),
@@ -96,6 +92,10 @@ OrderItemModel.init(
         key: "userid",
       },
     },
+    itemtype: {
+      type: DataTypes.ENUM("product", "gift"),
+      allowNull: false,
+    },
     productid: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -110,7 +110,7 @@ OrderItemModel.init(
       defaultValue: 1,
     },
     price: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.FLOAT,
       allowNull: false,
     },
     giftcardid: {
@@ -126,13 +126,21 @@ OrderItemModel.init(
       allowNull: true,
     },
     giftcardprice: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.FLOAT,
       allowNull: true,
       defaultValue: 0.0,
     },
     totalprice: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.FLOAT,
       allowNull: false,
+    },
+    addressid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: AddressModel,
+        key: "addressid",
+      },
     },
     itemstatus: {
       type: DataTypes.ENUM(
@@ -187,3 +195,7 @@ OrderItemModel.belongsTo(BusinessModel, {
   as: "business",
 });
 
+OrderItemModel.belongsTo(AddressModel, {
+  foreignKey: "addressid",
+  as: "address",
+});

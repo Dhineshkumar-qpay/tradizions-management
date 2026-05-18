@@ -4,6 +4,7 @@ import {
   getProductDetail,
   getAllGifts,
   giftDetails,
+  getGiftcards,
 } from "../controller/home_controller.js";
 import express from "express";
 
@@ -14,5 +15,6 @@ router.post("/product/product-detail", getProductDetail);
 
 router.post("/product/gifts", getAllGifts);
 router.post("/product/gift-detail", giftDetails);
+router.post("/product/gift-cards", getGiftcards);
 
 export default router;

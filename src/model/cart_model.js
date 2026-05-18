@@ -50,6 +50,10 @@ CartModel.init(
         key: "giftcardid",
       },
     },
+    giftmessage: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     itemtype: {
       type: DataTypes.ENUM("product", "gift"),
       allowNull: false,

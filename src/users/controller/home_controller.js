@@ -4,6 +4,7 @@ import { BannerModel } from "../../model/banner_model.js";
 import { CategoryModel } from "../../model/category_model.js";
 import { FavouriteProductModel } from "../../model/favourite_model.js";
 import {
+  GiftcardModel,
   ProductImagesModel,
   ProductModel,
   ProductReviewModel,
@@ -362,4 +363,18 @@ export const giftDetails = asyncHandler(async (req, res) => {
       totalreviews: productReviews.length,
     }),
   );
+});
+
+export const getGiftcards = asyncHandler(async (req, res) => {
+  try {
+    const { bid } = req.body;
+
+    if (!bid) throw new ApiError(400, "Bid is required");
+
+    const giftcards = await GiftcardModel.findAll({ where: { bid } });
+
+    return res.status(200).json(new ApiResponse(200, giftcards));
+  } catch (error) {
+    throw error;
+  }
 });

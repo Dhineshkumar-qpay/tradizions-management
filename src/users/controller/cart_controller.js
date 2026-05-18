@@ -7,7 +7,7 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 export const addToCart = asyncHandler(async (req, res) => {
   try {
     const userid = req.user?.userid;
-    const { bid, productid, giftid, quantity, itemtype } = req.body;
+    const { bid, productid, giftid, quantity, itemtype, isbuynow } = req.body;
 
     if (!userid) throw new ApiError(401, "User not authenticated");
     if (!bid) throw new ApiError(400, "Business ID is required");
@@ -71,8 +71,8 @@ export const addToCart = asyncHandler(async (req, res) => {
     });
 
     if (cartItem) {
-      // Check stock availability for new total quantity
-      const newQuantity = cartItem.quantity + parsedQuantity;
+      const newQuantity =
+        isbuynow == true ? parsedQuantity : cartItem.quantity + parsedQuantity;
       if (itemtype === "product") {
         const product = await ProductModel.findOne({
           where: { productid, bid, itemtype: "product" },
@@ -128,7 +128,12 @@ export const addToCart = asyncHandler(async (req, res) => {
       });
     }
 
-    return res.status(200).json(new ApiResponse(200, "Item added to cart"));
+    return res.status(200).json(
+      new ApiResponse(200, {
+        message: "Item added to cart",
+        cartid: cartItem.cartid,
+      }),
+    );
   } catch (error) {
     throw error;
   }
@@ -213,6 +218,8 @@ export const getCart = asyncHandler(async (req, res) => {
               quantity: data.quantity,
               totalprice: itemTotalPrice,
               giftcardid: data.giftcardid || 0,
+              giftmessage: data.giftmessage || "",
+              giftcardprice:cardPrice,
               giftid: data.product.productid,
               name: data.product.productname,
               image: data.product.productimage || null,
@@ -229,14 +236,10 @@ export const getCart = asyncHandler(async (req, res) => {
     );
 
     return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          cart: updatedCart,
-          totalamount: totalamount,
-        },
-        "Cart fetched successfully",
-      ),
+      new ApiResponse(200, {
+        cart: updatedCart,
+        totalamount: totalamount,
+      }),
     );
   } catch (error) {
     throw error;
@@ -247,7 +250,7 @@ export const selectGiftCard = asyncHandler(async (req, res) => {
   try {
     const userid = req.user?.userid;
 
-    const { cartid, giftcardid } = req.body;
+    const { cartid, giftcardid, giftmessage } = req.body;
 
     if (!cartid) {
       throw new ApiError(400, "Cart ID is required");
@@ -266,8 +269,7 @@ export const selectGiftCard = asyncHandler(async (req, res) => {
 
     if (parseInt(giftcardid) === 0) {
       cart.giftcardid = null;
-
-      await cart.save();
+      ((cart.giftmessage = giftmessage), await cart.save());
 
       return res
         .status(200)
@@ -281,8 +283,7 @@ export const selectGiftCard = asyncHandler(async (req, res) => {
     }
 
     cart.giftcardid = giftcardid;
-
-    await cart.save();
+    ((cart.giftmessage = giftmessage), await cart.save());
 
     return res
       .status(200)
@@ -417,6 +418,7 @@ export const checkoutDetail = asyncHandler(async (req, res) => {
         },
       ],
     });
+
     let totalamount = 0;
 
     const updatedCart = await Promise.all(
@@ -489,6 +491,87 @@ export const checkoutDetail = asyncHandler(async (req, res) => {
         products: updatedCart,
         totalamount: totalamount,
       }),
+    );
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const buyNowCheckout = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+
+    const { bid, productid, quantity, itemtype, giftid, giftcardid } = req.body;
+
+    if (!userid) {
+      throw new ApiError(401, "User not authenticated");
+    }
+
+    let product;
+
+    if (itemtype === "product") {
+      product = await ProductModel.findOne({
+        where: {
+          productid,
+          bid,
+          itemtype: "product",
+        },
+      });
+    } else {
+      product = await ProductModel.findOne({
+        where: {
+          productid: giftid,
+          bid,
+          itemtype: "gift",
+        },
+      });
+    }
+
+    if (!product) {
+      throw new ApiError(404, "Item not found");
+    }
+
+    if (product.availablestock < quantity) {
+      throw new ApiError(400, `Only ${product.availablestock} items available`);
+    }
+
+    const price = parseFloat(product.sellingprice) || parseFloat(product.price);
+
+    let cardPrice = 0;
+    let giftCard = null;
+
+    if (itemtype === "gift" && giftcardid) {
+      giftCard = await GiftcardModel.findByPk(giftcardid);
+
+      if (giftCard) {
+        cardPrice = parseFloat(giftCard.cardprice);
+      }
+    }
+
+    const totalprice = quantity * price + cardPrice;
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          products: [
+            {
+              itemtype,
+              quantity,
+              totalprice,
+              productid: product.productid,
+              name: product.productname,
+              image: product.productimage,
+              price: product.price,
+              sellingprice: product.sellingprice,
+              categoryname: product.categoryname,
+              giftcard: giftCard,
+            },
+          ],
+          totalamount: totalprice,
+        },
+        "Buy now checkout fetched successfully",
+      ),
     );
   } catch (error) {
     throw error;

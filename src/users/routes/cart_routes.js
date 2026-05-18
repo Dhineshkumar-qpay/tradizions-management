@@ -8,6 +8,7 @@ import {
   cartCount,
   selectGiftCard,
   checkoutDetail,
+  buyNowCheckout,
 } from "../controller/cart_controller.js";
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.post("/cart/update-quantity", verifyToken, updateCartQuantity);
 router.post("/cart/remove", verifyToken, removeFromCart);
 router.post("/cart/cart-count", verifyToken, cartCount);
 router.post("/cart/checkout-detail", verifyToken, checkoutDetail);
+router.post("/cart/buy-now", verifyToken, buyNowCheckout);
 
 export default router;
