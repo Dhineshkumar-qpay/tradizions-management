@@ -146,9 +146,11 @@ OrderItemModel.init(
       type: DataTypes.ENUM(
         "pending",
         "confirmed",
+        "processing",
+        "packed",
         "shipped",
+        "outfordelivery",
         "delivered",
-        "cancelled",
       ),
       allowNull: false,
       defaultValue: "pending",

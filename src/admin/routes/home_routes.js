@@ -4,15 +4,12 @@ import {
   verifyToken,
 } from "../../middleware/auth_middleware.js";
 import {
-  activeAppReview,
-  addAppReview,
   addThinamoruKural,
-  deleteAppReview,
-  getAllAppReviews,
   getKural,
   getMerchantDashboardCounts,
   getProductStocks,
-  getUserAppReviews,
+  getSuperAdminDashboardData,
+  getTotalStocksData,
   updateProductStock,
 } from "../controller/home_controller.js";
 import express from "express";
@@ -29,17 +26,17 @@ router.post("/home/update-product-stock", verifyToken, updateProductStock);
 
 router.post("/product/get-all-products", verifyToken, getAllProducts);
 
-// Review
 router.post(
-  "/review/get-all-reviews",
+  "/admin/dashboard-counts",
   verifyToken,
   adminOnly,
-  getAllAppReviews,
+  getSuperAdminDashboardData,
 );
-router.post("/review/delete-review", verifyToken, adminOnly, deleteAppReview);
-router.post("/review/active-review", verifyToken, adminOnly, activeAppReview);
-
-router.post("/review/add-review", verifyToken, userOnly, addAppReview);
-router.post("/review/get-user-reviews", getUserAppReviews);
+router.post(
+  "/admin/stock-counts",
+  verifyToken,
+  adminOnly,
+  getTotalStocksData,
+);
 
 export default router;

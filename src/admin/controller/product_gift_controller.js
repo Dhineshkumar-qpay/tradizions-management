@@ -729,6 +729,22 @@ export const getMerchantGifts = asyncHandler(async (req, res) => {
   }
 });
 
+export const getCorporateGiftProducts = asyncHandler(async (req, res) => {
+  try {
+    const products = await ProductModel.findAll({
+      where: {
+        itemtype:"gift",
+        gifttype: "nuts",
+      },
+      limit: 10,
+    });
+
+    return res.status(200).json(new ApiResponse(200, products));
+  } catch (error) {
+    throw error;
+  }
+});
+
 /// --------------------------- Gift cards ---------------------------///
 
 export const addGiftCard = asyncHandler(async (req, res) => {
@@ -797,7 +813,6 @@ export const deleteGiftCard = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, "Gift card deleted successfully"));
-
   } catch (error) {
     throw error;
   }

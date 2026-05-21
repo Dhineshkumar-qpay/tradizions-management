@@ -20,10 +20,13 @@ import {
   addGiftCard,
   getGiftCards,
   deleteGiftCard,
+  getCorporateGiftProducts,
 } from "../controller/product_gift_controller.js";
 import { upload } from "../../middleware/multer_middleware.js";
 
 const router = express.Router();
+
+router.post("/product/corporate-products", getCorporateGiftProducts);
 
 router.post(
   "/business/upload-product-image",

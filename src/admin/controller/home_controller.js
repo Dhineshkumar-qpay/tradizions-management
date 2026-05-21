@@ -14,6 +14,8 @@ import {
 import { type } from "os";
 import { Op } from "sequelize";
 import { OrderItemModel } from "../../model/order_model.js";
+import { BusinessModel } from "../../model/business_model.js";
+import { AuthModel } from "../../model/auth_model.js";
 
 export const addThinamoruKural = asyncHandler(async (req, res) => {
   try {
@@ -40,133 +42,6 @@ export const getKural = asyncHandler(async (req, res) => {
   try {
     const kural = await ThinamOruKuralModel.findAll();
     return res.status(200).json(new ApiResponse(200, kural));
-  } catch (error) {
-    throw error;
-  }
-});
-
-/* ---------------- App Reviews ------------------ */
-
-export const addAppReview = asyncHandler(async (req, res) => {
-  try {
-    const { username, email, rating, review } = req.body;
-
-    const userid = req.user.userid;
-
-    if (!username || !email || !review || !rating) {
-      throw new ApiError(400, "All fields are required");
-    }
-
-    const reviewExists = await TradizionsReviewModel.findOne({
-      where: {
-        userid: userid,
-      },
-    });
-
-    if (reviewExists) {
-      await reviewExists.update({
-        username: username.trim(),
-        email: email.trim(),
-        review: review.trim(),
-        rating: rating,
-      });
-
-      return res
-        .status(200)
-        .json(new ApiResponse(200, "Review Updated Successfully"));
-    }
-
-    const newReview = await TradizionsReviewModel.create({
-      userid: userid,
-      username: username.trim(),
-      email: email.trim(),
-      review: review.trim(),
-      rating: rating,
-    });
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Review Added Successfully"));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const getAllAppReviews = asyncHandler(async (req, res) => {
-  try {
-    const reviews = await TradizionsReviewModel.findAll({
-      order: [["createdAt", "DESC"]],
-    });
-
-    return res.status(200).json(new ApiResponse(200, reviews));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const deleteAppReview = asyncHandler(async (req, res) => {
-  try {
-    const { reviewid } = req.body;
-
-    if (!reviewid) {
-      throw new ApiError(400, "Review Id is required");
-    }
-
-    const existingReview = await TradizionsReviewModel.findByPk(reviewid);
-
-    if (!existingReview) {
-      throw new ApiError(404, "Review not found");
-    }
-
-    await TradizionsReviewModel.destroy({
-      where: {
-        reviewid: reviewid,
-      },
-    });
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Review Deleted Successfully"));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const getUserAppReviews = asyncHandler(async (req, res) => {
-  try {
-    const reviews = await TradizionsReviewModel.findAll({
-      where: {
-        isActive: true,
-      },
-      order: [["createdAt", "DESC"]],
-    });
-
-    return res.status(200).json(new ApiResponse(200, reviews));
-  } catch (error) {
-    throw error;
-  }
-});
-
-export const activeAppReview = asyncHandler(async (req, res) => {
-  try {
-    const { reviewid, isActive } = req.body;
-    if (!reviewid) {
-      throw new ApiError(400, "Review ID is required");
-    }
-
-    const review = await TradizionsReviewModel.findByPk(reviewid);
-
-    if (!review) {
-      throw new ApiError(400, "Review not found");
-    }
-
-    await review.update({
-      isActive: isActive,
-    });
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Review update successfully"));
   } catch (error) {
     throw error;
   }
@@ -280,6 +155,78 @@ export const updateProductStock = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, "Stock updated successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+// ---------------------- Super Admin Dashboard Page ----------------------
+
+export const getSuperAdminDashboardData = asyncHandler(async (req, res) => {
+  try {
+    const [totalMerchants, totalOrders, totalUsers] = await Promise.all([
+      await BusinessModel.count(),
+      await OrderItemModel.count(),
+      await AuthModel.count({
+        where: {
+          role: "user",
+        },
+      }),
+    ]);
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        totalmerchants: totalMerchants,
+        totalorders: totalOrders,
+        totalusers: totalUsers,
+        totalrevenue: 30000,
+      }),
+    );
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getTotalStocksData = asyncHandler(async (req, res) => {
+  try {
+    const [
+      totalShops,
+      totalProducts,
+      totalAvailableStock,
+      totalLowStockProducts,
+      totalOutofStockProducts,
+    ] = await Promise.all([
+      await ProductModel.count(),
+      await ProductModel.count({
+        where: {
+          availablestock: {
+            [Op.gt]: 10,
+          },
+        },
+      }),
+      await ProductModel.count({
+        where: {
+          availablestock: {
+            [Op.gt]: 0,
+            [Op.lte]: 10,
+          },
+        },
+      }),
+      await ProductModel.count({
+        where: {
+          availablestock: 0,
+        },
+      }),
+    ]);
+    return res.status(200).json(
+      new ApiResponse(200, {
+        totalshops: totalShops,
+        totalProducts: totalProducts,
+        totalavailable: totalAvailableStock,
+        totallowstock: totalLowStockProducts,
+        totaloutofstock: totalOutofStockProducts,
+      }),
+    );
   } catch (error) {
     throw error;
   }

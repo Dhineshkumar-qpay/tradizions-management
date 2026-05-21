@@ -1,4 +1,4 @@
-import { or } from "sequelize";
+import { Op, or } from "sequelize";
 import { sequelize } from "../../../connection.js";
 import { AddressModel } from "../../model/address_model.js";
 import { CartModel } from "../../model/cart_model.js";
@@ -256,13 +256,12 @@ export const getOrderItems = asyncHandler(async (req, res) => {
 
 export const orderDetails = asyncHandler(async (req, res) => {
   try {
-    const userid = req.user?.userid;
     const { orderitemid } = req.body;
 
     if (!orderitemid) throw new ApiError(400, "Order Id is required");
 
     const orderItem = await OrderItemModel.findOne({
-      where: { userid, orderitemid },
+      where: { orderitemid },
       attributes: {
         exclude: ["createdAt", "updatedAt"],
       },
@@ -457,6 +456,177 @@ export const getMerchantOrders = asyncHandler(async (req, res) => {
           giftcardprice: giftDetails.cardprice || null,
           giftmessage: item.giftmessage || null,
           odredate: formatedDate,
+        };
+      }),
+    );
+
+    return res.status(200).json(new ApiResponse(200, updatedOrderItems));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const updateOrderStatus = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+    const { orderitemid, itemstatus } = req.body;
+
+    if (!orderitemid) {
+      throw new ApiError(400, "Order Item Id is required");
+    }
+
+    const orderItem = await OrderItemModel.findOne({
+      where: { orderitemid },
+    });
+
+    if (!orderItem) {
+      throw new ApiError(404, "Order Item not found");
+    }
+
+    orderItem.itemstatus = itemstatus;
+    await orderItem.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Order Status Updated Successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getAdminOrdersList = asyncHandler(async (req, res) => {
+  try {
+    const { bid, fromdate, todate } = req.body;
+
+    if (!bid) {
+      throw new ApiError(400, "Business id is required");
+    }
+
+    const currentDate = new Date();
+
+    const startOfMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      1,
+      0,
+      0,
+      0,
+      0,
+    );
+
+    const endOfMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+
+    const startDate = fromdate
+      ? new Date(`${fromdate}T00:00:00.000Z`)
+      : startOfMonth;
+
+    const endDate = todate ? new Date(`${todate}T23:59:59.999Z`) : endOfMonth;
+
+    const ordersItems = await OrderItemModel.findAll({
+      where: {
+        bid,
+        createdAt: {
+          [Op.between]: [startDate, endDate],
+        },
+      },
+
+      include: [
+        {
+          model: OrderModel,
+          as: "order",
+          attributes: ["orderid", "userid", "totalamount", "orderstatus"],
+        },
+
+        {
+          model: ProductModel,
+          as: "product",
+          attributes: ["productid", "productname", "productimage", "itemtype"],
+        },
+
+        {
+          model: AddressModel,
+          as: "address",
+          attributes: [
+            "addressid",
+            "addressline",
+            "landmark",
+            "city",
+            "district",
+            "state",
+            "pincode",
+          ],
+        },
+
+        {
+          model: AuthModel,
+          as: "user",
+          attributes: ["username", "email", "phone"],
+        },
+      ],
+
+      order: [["createdAt", "DESC"]],
+    });
+
+    const updatedOrderItems = await Promise.all(
+      ordersItems.map(async (item) => {
+        let giftDetails = {};
+
+        const order = item.order?.dataValues || {};
+        const product = item.product?.dataValues || {};
+        const address = item.address?.dataValues || {};
+        const user = item.user?.dataValues || {};
+
+        const [year, month, day] = item.createdAt
+          .toISOString()
+          .split("T")[0]
+          .split("-");
+
+        const formatedDate = `${day}-${month}-${year}`;
+
+        if (item.giftcardid) {
+          giftDetails = await GiftcardModel.findOne({
+            where: {
+              giftcardid: item.giftcardid,
+            },
+          });
+        }
+
+        return {
+          orderid: order.orderid || 0,
+          orderitemid: item.orderitemid,
+          userid: order.userid || 0,
+          orderstatus: order.orderstatus || "",
+          username: user.username || "",
+          email: user.email || "",
+          phone: user.phone || "",
+          itemtype: product.itemtype || "",
+          productname: product.productname || "",
+          productimage: product.productimage || "",
+          quantity: item.quantity,
+          price: item.price,
+          addressid: address.addressid || 0,
+          addressline: address.addressline || "",
+          landmark: address.landmark || "",
+          city: address.city || "",
+          district: address.district || "",
+          state: address.state || "",
+          pincode: address.pincode || "",
+          totalprice: item.totalprice,
+          itemstatus: item.itemstatus,
+          giftcardid: giftDetails?.giftcardid || 0,
+          giftcardname: giftDetails?.cardname || "",
+          giftcardimage: giftDetails?.cardimage || null,
+          giftcardprice: giftDetails?.cardprice || null,
+          giftmessage: item.giftmessage || null,
+          orderdate: formatedDate,
         };
       }),
     );
