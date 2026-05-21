@@ -38,7 +38,7 @@ CartModel.init(
       },
     },
     quantity: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.FLOAT,
       allowNull: false,
       defaultValue: 1,
     },

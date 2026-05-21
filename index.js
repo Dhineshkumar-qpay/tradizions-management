@@ -20,6 +20,7 @@ import ProductCategoryRouter from "./src/users/routes/home_routes.js";
 import AddressRouter from "./src/users/routes/address_routes.js";
 import FavouriteRouter from "./src/users/routes/favourite_routes.js";
 import OrderRouter from "./src/users/routes/order_routes.js";
+import MonthlyCalculatorRouter from "./src/users/routes/monthly_calculator_routes.js";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/api", ProductCategoryRouter);
 app.use("/api", AddressRouter);
 app.use("/api", FavouriteRouter);
 app.use("/api", OrderRouter);
+app.use("/api", MonthlyCalculatorRouter);
 
 app.use(errorMiddleware);
 

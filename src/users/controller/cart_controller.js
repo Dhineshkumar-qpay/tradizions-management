@@ -15,9 +15,9 @@ export const addToCart = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Valid itemtype (product or gift) is required");
     }
 
-    const parsedQuantity = parseInt(quantity);
+    const parsedQuantity = parseFloat(quantity);
     if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
-      throw new ApiError(400, "Quantity must be a positive integer");
+      throw new ApiError(400, "Quantity must be a positive number");
     }
 
     if (itemtype === "product") {
@@ -306,9 +306,9 @@ export const updateCartQuantity = asyncHandler(async (req, res) => {
     if (!userid) throw new ApiError(401, "User not authenticated");
     if (!cartid) throw new ApiError(400, "Cart ID is required");
 
-    const parsedQuantity = parseInt(quantity);
+    const parsedQuantity = parseFloat(quantity);
     if (isNaN(parsedQuantity)) {
-      throw new ApiError(400, "Quantity must be a valid integer");
+      throw new ApiError(400, "Quantity must be a valid number");
     }
 
     const cartItem = await CartModel.findOne({
