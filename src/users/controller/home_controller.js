@@ -108,16 +108,12 @@ export const getAllProducts = asyncHandler(async (req, res) => {
 
     if (!rows.length) {
       return res.status(200).json(
-        new ApiResponse(
-          200,
-          {
-            totalProducts: 0,
-            totalPages: 0,
-            currentPage: Number(page),
-            products: [],
-          },
-          "No products found",
-        ),
+        new ApiResponse(200, {
+          totalProducts: 0,
+          totalPages: 0,
+          currentPage: Number(page),
+          products: [],
+        }),
       );
     }
 
@@ -202,7 +198,6 @@ export const getProductDetail = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, updatedData));
 });
 
-
 export const getHomeProducts = asyncHandler(async (req, res) => {
   const attributes = [
     "productid",
@@ -213,6 +208,8 @@ export const getHomeProducts = asyncHandler(async (req, res) => {
     "subcategoryid",
     "price",
     "availablestock",
+    "weight",
+    "unit",
     "sellingprice",
     "isFavourite",
   ];
@@ -290,7 +287,7 @@ export const searchProducts = asyncHandler(async (req, res) => {
           },
         ],
       },
-      
+
       attributes: [
         "productid",
         "bid",
@@ -310,7 +307,6 @@ export const searchProducts = asyncHandler(async (req, res) => {
     throw error;
   }
 });
-
 
 // ---------------------------Gift Detail ---------------------------
 

@@ -224,8 +224,15 @@ export const getOrderItems = asyncHandler(async (req, res) => {
     const userid = req.user?.userid;
     const { itemtype } = req.body;
 
+    let whereClause = { userid };
+
+    if (itemtype) {
+      whereClause.itemtype = itemtype;
+      whereClause.ordertype = "normal"
+    }
+
     const orderItems = await OrderItemModel.findAll({
-      where: { userid, itemtype: itemtype },
+      where: whereClause,
       attributes: {
         exclude: ["createdAt", "updatedAt"],
       },

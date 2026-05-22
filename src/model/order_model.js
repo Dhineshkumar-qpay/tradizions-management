@@ -27,16 +27,22 @@ OrderModel.init(
       defaultValue: 0,
     },
     totalamount: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.FLOAT,
       allowNull: false,
+    },
+    ordertype: {
+      type: DataTypes.ENUM("normal", "monthly"),
+      defaultValue: "normal",
     },
     orderstatus: {
       type: DataTypes.ENUM(
         "pending",
         "confirmed",
+        "processing",
+        "packed",
         "shipped",
+        "outfordelivery",
         "delivered",
-        "cancelled",
       ),
       allowNull: false,
       defaultValue: "pending",
@@ -79,18 +85,14 @@ OrderItemModel.init(
     bid: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: BusinessModel,
-        key: "bid",
-      },
+    },
+    ordertype: {
+      type: DataTypes.ENUM("normal", "monthly"),
+      defaultValue: "normal",
     },
     userid: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: AuthModel,
-        key: "userid",
-      },
     },
     itemtype: {
       type: DataTypes.ENUM("product", "gift"),
@@ -99,10 +101,6 @@ OrderItemModel.init(
     productid: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: ProductModel,
-        key: "productid",
-      },
     },
     quantity: {
       type: DataTypes.INTEGER,
@@ -116,10 +114,6 @@ OrderItemModel.init(
     giftcardid: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      references: {
-        model: GiftcardModel,
-        key: "giftcardid",
-      },
     },
     giftmessage: {
       type: DataTypes.STRING,
@@ -137,25 +131,16 @@ OrderItemModel.init(
     addressid: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: AddressModel,
-        key: "addressid",
-      },
     },
-    ordertype: {
-      type: DataTypes.ENUM("normal", "monthly"),
-      defaultValue:"normal"
+    gramsperday: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
     },
-    gramsperday:{
+    dayspermonth: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    dayspermonth:
-    {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-    familymembers:{
+    familymembers: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
@@ -175,7 +160,7 @@ OrderItemModel.init(
   },
   {
     sequelize,
-    tableName: "order_items",
+    tableName: "orderitems",
     modelName: "OrderItemModel",
     timestamps: true,
   },

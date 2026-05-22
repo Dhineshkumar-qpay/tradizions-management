@@ -36,15 +36,61 @@ export const getCalculatedProducts = asyncHandler(async (req, res) => {
   }
 });
 
-export const monthlyOrderSummary = asyncHandler(async (req, res) => {
+export const addToMonthlyCart = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+    const { products } = req.body;
+
+    if (!userid) throw new ApiError(401, "User not authenticated");
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      throw new ApiError(400, "Products array is required");
+    }
+
+    await MonthlyCalculatorModel.destroy({
+      where: { userid },
+    });
+
+    const cartData = products.map((item) => {
+      if (
+        !item.bid ||
+        !item.productid ||
+        !item.gramsperday ||
+        !item.dayspermonth ||
+        !item.familymembers
+      ) {
+        throw new ApiError(
+          400,
+          "bid, productid, gramsperday, dayspermonth, familymembers are required for all products",
+        );
+      }
+      return {
+        userid,
+        bid: item.bid,
+        productid: item.productid,
+        gramsperday: item.gramsperday,
+        dayspermonth: item.dayspermonth,
+        familymembers: item.familymembers,
+      };
+    });
+
+    await MonthlyCalculatorModel.bulkCreate(cartData);
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Items added successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getMonthlyCart = asyncHandler(async (req, res) => {
   try {
     const userid = req.user?.userid;
 
-    if (!userid) {
-      throw new ApiError(401, "User not authenticated");
-    }
+    if (!userid) throw new ApiError(401, "User not authenticated");
 
-    const cartItems = await MonthlyCalculatorModel.findAll({
+    const items = await MonthlyCalculatorModel.findAll({
       where: { userid },
       include: [
         {
@@ -53,65 +99,58 @@ export const monthlyOrderSummary = asyncHandler(async (req, res) => {
           required: true,
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
 
-    if (!cartItems || cartItems.length === 0) {
-      throw new ApiError(400, "Monthly cart is empty");
-    }
+    let totalamount = 0;
 
-    const calculatedProducts = [];
-    let grandTotal = 0;
-
-    for (const item of cartItems) {
-      const { gramsperday, dayspermonth, familymembers, product } = item;
+    const formattedItems = items.map((item) => {
+      const product = item.product.dataValues;
+      const itemData = item.dataValues;
 
       const activePrice = parseFloat(
         product.sellingprice || product.price || 0,
       );
 
-      const qtyPerPersonKg = (gramsperday * dayspermonth) / 1000;
-      const totalQuantityKg = qtyPerPersonKg * familymembers;
-      const totalBudget = Math.round(totalQuantityKg * activePrice);
+      const qtyPerPersonKg =
+        (itemData.gramsperday * itemData.dayspermonth) / 1000;
 
-      calculatedProducts.push({
+      const totalQuantityKg = qtyPerPersonKg * itemData.familymembers;
+      const calcultedprice = Math.round(activePrice * totalQuantityKg);
+
+      totalamount += Math.round(totalQuantityKg * activePrice);
+
+      return {
         monthlycartid: item.monthlycartid,
+        bid: itemData.bid,
+        userid: itemData.userid,
         productid: product.productid,
         productname: product.productname,
         productimage: product.productimage,
-        categoryname: product.categoryname,
-        gramsperday,
-        dayspermonth,
-        familymembers,
-        qtyPerPersonKg: parseFloat(qtyPerPersonKg.toFixed(2)),
-        totalQuantityKg: parseFloat(totalQuantityKg.toFixed(2)),
-        pricePerKg: activePrice,
-        totalBudget,
-      });
-
-      grandTotal += totalBudget;
-    }
-
-    const addresses = await AddressModel.findAll({
-      where: { userid },
+        gramsperday: itemData.gramsperday,
+        dayspermonth: itemData.dayspermonth,
+        familymembers: itemData.familymembers,
+        quantitypersonkg: parseFloat(qtyPerPersonKg.toFixed(2)),
+        totalquantitykg: parseFloat(totalQuantityKg.toFixed(2)),
+        sellingprice: product.sellingprice,
+        price: product.price,
+        calcultedprice: calcultedprice,
+        itemtype: product.itemtype,
+      };
     });
 
     return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          addresses,
-          products: calculatedProducts,
-          grandTotal,
-        },
-        "Monthly order summary fetched successfully",
-      ),
+      new ApiResponse(200, {
+        items: formattedItems,
+        totalamount: totalamount,
+      }),
     );
   } catch (error) {
     throw error;
   }
 });
 
-export const placeMonthlySubscriptionOrder = asyncHandler(async (req, res) => {
+export const placeMonthlyOrder = asyncHandler(async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -199,6 +238,7 @@ export const placeMonthlySubscriptionOrder = asyncHandler(async (req, res) => {
         totalamount,
         orderstatus: "pending",
         paymentstatus: "pending",
+        ordertype: "monthly",
       },
       { transaction },
     );
@@ -234,8 +274,8 @@ export const placeMonthlySubscriptionOrder = asyncHandler(async (req, res) => {
           gramsperday,
           dayspermonth,
           familymembers,
-          ordertype: "monthly",
-          itemtype: "product"
+          itemtype: "product",
+          ordertype:"monthly"
         },
         { transaction },
       );
@@ -264,114 +304,154 @@ export const placeMonthlySubscriptionOrder = asyncHandler(async (req, res) => {
   }
 });
 
-// ------------ DATABASE STORAGE FUNCTIONS ------------
-
-export const addToMonthlyCart = asyncHandler(async (req, res) => {
+export const getMonthlyOrders = asyncHandler(async (req, res) => {
   try {
     const userid = req.user?.userid;
-    const { products } = req.body;
 
-    if (!userid) throw new ApiError(401, "User not authenticated");
-
-    if (!products || !Array.isArray(products) || products.length === 0) {
-      throw new ApiError(400, "Products array is required");
-    }
-
-    await MonthlyCalculatorModel.destroy({
-      where: { userid },
+    const orders = await OrderModel.findAll({
+      where: { userid, ordertype: "monthly" },
     });
 
-    const cartData = products.map((item) => {
-      if (
-        !item.bid ||
-        !item.productid ||
-        !item.gramsperday ||
-        !item.dayspermonth ||
-        !item.familymembers
-      ) {
-        throw new ApiError(
-          400,
-          "bid, productid, gramsperday, dayspermonth, familymembers are required for all products",
-        );
-      }
+    const updatedOrders = orders.map((item) => {
       return {
-        userid,
-        bid: item.bid,
-        productid: item.productid,
-        gramsperday: item.gramsperday,
-        dayspermonth: item.dayspermonth,
-        familymembers: item.familymembers,
+        orderid: item.orderid,
+        userid: item.userid,
+        addressid: item.addressid,
+        totalamount: item.totalamount,
+        ordertype: item.ordertype,
+        orderstatus: item.orderstatus,
+        paymentstatus: item.paymentstatus,
+        paymentid: item.paymentid,
+        orderdate: item.createdAt
+          .toLocaleDateString("en-GB")
+          .replace(/\//g, "-"),
       };
     });
 
-    await MonthlyCalculatorModel.bulkCreate(cartData);
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Items added successfully"));
+    return res.status(200).json(new ApiResponse(200, updatedOrders));
   } catch (error) {
     throw error;
   }
 });
 
-export const getMonthlyCart = asyncHandler(async (req, res) => {
+export const getMonthlyOrderDetails = asyncHandler(async (req, res) => {
   try {
-    const userid = req.user?.userid;
+    const { orderid } = req.body;
 
-    if (!userid) throw new ApiError(401, "User not authenticated");
+    if (!orderid) {
+      throw new ApiError(400, "Order ID is required");
+    }
 
-    const items = await MonthlyCalculatorModel.findAll({
-      where: { userid },
+    const orderItems = await OrderItemModel.findAll({
+      where: { orderid },
       include: [
         {
           model: ProductModel,
           as: "product",
           required: true,
+          attributes: ["productid", "productname", "productimage", "itemtype"],
+        },
+        {
+          model: AddressModel,
+          as: "address",
+          required: true,
+          attributes: [
+            "addressid",
+            "addressline",
+            "landmark",
+            "city",
+            "district",
+            "state",
+            "pincode",
+          ],
         },
       ],
-      order: [["createdAt", "DESC"]],
     });
 
-    let totalamount = 0;
+    const order = await OrderModel.findOne({
+      where: { orderid },
+      attributes: ["totalamount", "orderstatus", "paymentstatus"],
+    });
+    let updatedAddress = null;
 
-    const formattedItems = items.map((item) => {
+    const formattedItems = orderItems.map((item) => {
       const product = item.product.dataValues;
-      const itemData = item.dataValues;
+      const address = item.address.dataValues;
+
+      updatedAddress = `${address.addressline}, ${address.landmark}, ${address.city}, ${address.district}, ${address.state}, ${address.pincode}`;
 
       const activePrice = parseFloat(
         product.sellingprice || product.price || 0,
       );
 
       const qtyPerPersonKg =
-        (itemData.gramsperday * itemData.dayspermonth) / 1000;
+        (item.gramsperday * item.dayspermonth) / 1000;
 
-      const totalQuantityKg = qtyPerPersonKg * itemData.familymembers;
-
-      totalamount += Math.round(totalQuantityKg * activePrice);
+      const totalQuantityKg = qtyPerPersonKg * item.familymembers;
+      const calcultedprice = Math.round(activePrice * totalQuantityKg);
 
       return {
-        monthlycartid: item.monthlycartid,
-        bid: itemData.bid,
-        userid: itemData.userid,
-        gramsperday: itemData.gramsperday,
-        dayspermonth: itemData.dayspermonth,
-        familymembers: itemData.familymembers,
+        orderitemid: item.orderitemid,
+        orderid: item.orderid,
         productid: product.productid,
         productname: product.productname,
         productimage: product.productimage,
-        sellingprice: product.sellingprice,
-        price: product.price,
         itemtype: product.itemtype,
+        quantitypersonkg: parseFloat(qtyPerPersonKg.toFixed(2)),
+        totalquantitykg: parseFloat(totalQuantityKg.toFixed(2)),
+        price: item.price,
+        totalprice: item.totalprice,
+        gramsperday: item.gramsperday,
+        dayspermonth: item.dayspermonth,
+        familymembers: item.familymembers,
       };
     });
 
     return res.status(200).json(
       new ApiResponse(200, {
+        order: {
+          orderid: order.orderid,
+          totalamount: order.totalamount,
+          orderstatus: order.orderstatus,
+          paymentstatus: order.paymentstatus,
+          address: updatedAddress,
+        },
         items: formattedItems,
-        totalamount: totalamount,
       }),
     );
   } catch (error) {
     throw error;
   }
+});
+
+export const updateMonthlyOrderStatus = asyncHandler(async (req, res) => {
+  const { orderid, orderstatus } = req.body;
+
+  if (!orderid) {
+    throw new ApiError(400, "Order ID is required");
+  }
+
+  if (!orderstatus) {
+    throw new ApiError(400, "Order Status is required");
+  }
+
+  const order = await OrderModel.findOne({
+    where: { orderid },
+  });
+
+  if (!order) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  await OrderItemModel.update(
+    { itemstatus: orderstatus },
+    { where: { orderid } },
+  );
+
+  order.orderstatus = orderstatus;
+  await order.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Order Status Updated Successfully"));
 });
