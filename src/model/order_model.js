@@ -142,6 +142,23 @@ OrderItemModel.init(
         key: "addressid",
       },
     },
+    ordertype: {
+      type: DataTypes.ENUM("normal", "monthly"),
+      defaultValue:"normal"
+    },
+    gramsperday:{
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    dayspermonth:
+    {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    familymembers:{
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     itemstatus: {
       type: DataTypes.ENUM(
         "pending",

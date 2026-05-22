@@ -291,6 +291,10 @@ export const orderDetails = asyncHandler(async (req, res) => {
       price: orderItem.price,
       totalprice: orderItem.totalprice,
       itemstatus: orderItem.itemstatus,
+      ordertype: orderItem.ordertype || "normal",
+      gramsperday: orderItem.gramsperday || null,
+      dayspermonth: orderItem.dayspermonth || null,
+      familymembers: orderItem.familymembers || null,
     };
 
     if (orderItem.giftcardid) {
@@ -450,6 +454,10 @@ export const getMerchantOrders = asyncHandler(async (req, res) => {
           pincode: address.pincode,
           totalprice: item.totalprice,
           itemstatus: item.itemstatus,
+          ordertype: item.ordertype || "normal",
+          gramsperday: item.gramsperday || null,
+          dayspermonth: item.dayspermonth || null,
+          familymembers: item.familymembers || null,
           giftcardid: giftDetails.giftcardid || 0,
           giftcardname: giftDetails.cardname,
           giftcardimage: giftDetails.cardimage || null,
@@ -621,6 +629,10 @@ export const getAdminOrdersList = asyncHandler(async (req, res) => {
           pincode: address.pincode || "",
           totalprice: item.totalprice,
           itemstatus: item.itemstatus,
+          ordertype: item.ordertype || "normal",
+          gramsperday: item.gramsperday || null,
+          dayspermonth: item.dayspermonth || null,
+          familymembers: item.familymembers || null,
           giftcardid: giftDetails?.giftcardid || 0,
           giftcardname: giftDetails?.cardname || "",
           giftcardimage: giftDetails?.cardimage || null,

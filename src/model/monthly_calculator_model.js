@@ -8,7 +8,7 @@ class MonthlyCalculatorModel extends Model {}
 
 MonthlyCalculatorModel.init(
   {
-    mcid: {
+    monthlycartid: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
@@ -37,40 +37,22 @@ MonthlyCalculatorModel.init(
         key: "productid",
       },
     },
-    gramsPerDay: {
+    gramsperday: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    daysPerMonth: {
+    dayspermonth: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    familyMembers: {
+    familymembers: {
       type: DataTypes.INTEGER,
       allowNull: false,
-    },
-    quantity: {
-      type: DataTypes.FLOAT,
-      allowNull: false,
-    },
-    totalprice: {
-      type: DataTypes.FLOAT,
-      allowNull: false,
-    },
-    status: {
-      type: DataTypes.ENUM(
-        "pending",
-        "confirmed",
-        "shipped",
-        "delivered",
-        "cancelled"
-      ),
-      defaultValue: "pending",
     },
   },
   {
     sequelize,
-    tableName: "monthly_calculator_orders",
+    tableName: "monthlycart",
     modelName: "MonthlyCalculatorModel",
     timestamps: true,
   }

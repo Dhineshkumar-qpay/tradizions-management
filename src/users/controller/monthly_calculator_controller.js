@@ -4,6 +4,9 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { AuthModel } from "../../model/auth_model.js";
+import { sequelize } from "../../../connection.js";
+import { AddressModel } from "../../model/address_model.js";
+import { OrderItemModel, OrderModel } from "../../model/order_model.js";
 import { MonthlyCalculatorModel } from "../../model/monthly_calculator_model.js";
 
 export const getCalculatedProducts = asyncHandler(async (req, res) => {
@@ -15,7 +18,7 @@ export const getCalculatedProducts = asyncHandler(async (req, res) => {
     }
 
     const products = await ProductModel.findAll({
-      where: { categoryid: categoryid },
+      where: { categoryid: categoryid, unit: "kg" },
       attributes: [
         "bid",
         "productid",
@@ -33,182 +36,342 @@ export const getCalculatedProducts = asyncHandler(async (req, res) => {
   }
 });
 
-export const buyNowCalculator = asyncHandler(async (req, res) => {
-  const userid = req.user?.userid;
-  if (!userid) throw new ApiError(401, "User not authenticated");
+export const monthlyOrderSummary = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
 
-  const { items } = req.body;
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    throw new ApiError(400, "Items array is required");
-  }
-
-  const productsList = [];
-  let totalamount = 0;
-
-  for (const item of items) {
-    const { bid, productid, gramsPerDay, daysPerMonth, familyMembers } = item;
-
-    if (!bid || !productid || !gramsPerDay || !daysPerMonth || !familyMembers) {
-      continue;
+    if (!userid) {
+      throw new ApiError(401, "User not authenticated");
     }
 
-    const product = await ProductModel.findOne({
-      where: { productid, bid, itemtype: "product" },
+    const cartItems = await MonthlyCalculatorModel.findAll({
+      where: { userid },
+      include: [
+        {
+          model: ProductModel,
+          as: "product",
+          required: true,
+        },
+      ],
     });
 
-    if (!product) continue;
-
-    const totalKg = (gramsPerDay * daysPerMonth * familyMembers) / 1000;
-    if (totalKg <= 0) continue;
-    console.log(`------------------------- ${familyMembers}`);
-
-    let requiredQuantity = totalKg;
-    if (product.unit === "g" && product.weight) {
-      const weightInKg = product.weight / 1000;
-      requiredQuantity = totalKg / weightInKg;
-    } else if (product.unit === "kg" && product.weight) {
-      requiredQuantity = totalKg / product.weight;
+    if (!cartItems || cartItems.length === 0) {
+      throw new ApiError(400, "Monthly cart is empty");
     }
 
-    requiredQuantity = parseFloat(requiredQuantity.toFixed(2));
+    const calculatedProducts = [];
+    let grandTotal = 0;
 
-    if (product.availablestock < requiredQuantity) {
-      throw new ApiError(
-        400,
-        `Only ${product.availablestock} units in stock for product ${product.productname}`,
+    for (const item of cartItems) {
+      const { gramsperday, dayspermonth, familymembers, product } = item;
+
+      const activePrice = parseFloat(
+        product.sellingprice || product.price || 0,
       );
+
+      const qtyPerPersonKg = (gramsperday * dayspermonth) / 1000;
+      const totalQuantityKg = qtyPerPersonKg * familymembers;
+      const totalBudget = Math.round(totalQuantityKg * activePrice);
+
+      calculatedProducts.push({
+        monthlycartid: item.monthlycartid,
+        productid: product.productid,
+        productname: product.productname,
+        productimage: product.productimage,
+        categoryname: product.categoryname,
+        gramsperday,
+        dayspermonth,
+        familymembers,
+        qtyPerPersonKg: parseFloat(qtyPerPersonKg.toFixed(2)),
+        totalQuantityKg: parseFloat(totalQuantityKg.toFixed(2)),
+        pricePerKg: activePrice,
+        totalBudget,
+      });
+
+      grandTotal += totalBudget;
     }
 
-    const price = parseFloat(product.sellingprice) || parseFloat(product.price);
-    const itemTotalPrice = familyMembers * price;
-
-    totalamount += itemTotalPrice;
-
-    productsList.push({
-      itemtype: "product",
-      quantity: familyMembers,
-      totalprice: itemTotalPrice,
-      productid: product.productid,
-      name: product.productname,
-      image: product.productimage,
-      price: product.price,
-      sellingprice: product.sellingprice,
-      categoryname: product.categoryname,
+    const addresses = await AddressModel.findAll({
+      where: { userid },
     });
-  }
 
-  return res.status(200).json(
-    new ApiResponse(200, {
-      products: productsList,
-      totalamount,
-    }),
-  );
-});
-
-export const placeCalculatorOrder = asyncHandler(async (req, res) => {
-  const userid = req.user?.userid;
-  if (!userid) throw new ApiError(401, "User not authenticated");
-
-  const { items } = req.body;
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    throw new ApiError(400, "Items array is required");
-  }
-
-  const savedOrders = [];
-
-  for (const item of items) {
-    const {
-      bid,
-      productid,
-      gramsPerDay,
-      daysPerMonth,
-      familyMembers,
-      quantity,
-      totalprice,
-    } = item;
-    if (
-      !bid ||
-      !productid ||
-      !gramsPerDay ||
-      !daysPerMonth ||
-      !familyMembers ||
-      !quantity ||
-      !totalprice
-    ) {
-      continue;
-    }
-
-    const newOrder = await MonthlyCalculatorModel.create({
-      userid,
-      bid,
-      productid,
-      gramsPerDay,
-      daysPerMonth,
-      familyMembers,
-      quantity,
-      totalprice,
-      status: "pending",
-    });
-    savedOrders.push(newOrder);
-  }
-
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(
-        201,
-        savedOrders,
-        "Calculator orders placed successfully",
-      ),
-    );
-});
-
-export const getUserCalculatorOrders = asyncHandler(async (req, res) => {
-  const userid = req.user?.userid;
-  if (!userid) throw new ApiError(401, "User not authenticated");
-
-  const orders = await MonthlyCalculatorModel.findAll({
-    where: { userid },
-    include: [{ model: ProductModel, as: "product" }],
-    order: [["createdAt", "DESC"]],
-  });
-
-  return res
-    .status(200)
-    .json(
+    return res.status(200).json(
       new ApiResponse(
         200,
-        orders,
-        "User calculator orders fetched successfully",
+        {
+          addresses,
+          products: calculatedProducts,
+          grandTotal,
+        },
+        "Monthly order summary fetched successfully",
       ),
     );
+  } catch (error) {
+    throw error;
+  }
 });
 
-export const getMerchantCalculatorOrders = asyncHandler(async (req, res) => {
-  // Assuming merchant passes bid in body or it's extracted from admin auth
-  const { bid } = req.body;
-  if (!bid) throw new ApiError(400, "Business ID is required");
+export const placeMonthlySubscriptionOrder = asyncHandler(async (req, res) => {
+  const transaction = await sequelize.transaction();
 
-  const orders = await MonthlyCalculatorModel.findAll({
-    where: { bid },
-    include: [
-      { model: ProductModel, as: "product" },
-      {
-        model: AuthModel,
-        as: "user",
-        attributes: ["userid", "name", "email", "phone"],
+  try {
+    const userid = req.user?.userid;
+    const { addressid } = req.body;
+
+    if (!userid) {
+      throw new ApiError(401, "User not authenticated");
+    }
+
+    if (!addressid) {
+      throw new ApiError(400, "Address ID is required");
+    }
+
+    /// ------- ADDRESS VALIDATION -------
+    const existingAddress = await AddressModel.findOne({
+      where: {
+        addressid,
+        userid,
       },
-    ],
-    order: [["createdAt", "DESC"]],
-  });
+      transaction,
+    });
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        orders,
-        "Merchant calculator orders fetched successfully",
-      ),
+    if (!existingAddress) {
+      throw new ApiError(404, "Address not found");
+    }
+
+    const cartItems = await MonthlyCalculatorModel.findAll({
+      where: { userid },
+      include: [
+        {
+          model: ProductModel,
+          as: "product",
+          required: true,
+        },
+      ],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!cartItems || cartItems.length === 0) {
+      throw new ApiError(400, "Monthly cart is empty");
+    }
+
+    let totalamount = 0;
+    const orderItemsData = [];
+
+    /// ------- CALCULATE TOTAL AND PREPARE ITEMS -------
+    for (const item of cartItems) {
+      const { gramsperday, dayspermonth, familymembers, product } = item;
+
+      const activePrice = parseFloat(
+        product.sellingprice || product.price || 0,
+      );
+
+      const qtyPerPersonKg = (gramsperday * dayspermonth) / 1000;
+      const totalQuantityKg = qtyPerPersonKg * familymembers;
+      const totalBudget = Math.round(totalQuantityKg * activePrice);
+
+      if (product.availablestock < totalQuantityKg) {
+        throw new ApiError(
+          400,
+          `${product.productname} only ${product.availablestock} stock available`,
+        );
+      }
+
+      totalamount += totalBudget;
+
+      orderItemsData.push({
+        product,
+        gramsperday,
+        dayspermonth,
+        familymembers,
+        quantity: parseFloat(totalQuantityKg.toFixed(2)),
+        price: activePrice,
+        totalprice: totalBudget,
+      });
+    }
+
+    /// ------- CREATE MAIN ORDER -------
+    const order = await OrderModel.create(
+      {
+        userid,
+        addressid: addressid,
+        totalamount,
+        orderstatus: "pending",
+        paymentstatus: "pending",
+      },
+      { transaction },
     );
+
+    /// ------- CREATE ORDER ITEMS AND UPDATE STOCK -------
+    for (const item of orderItemsData) {
+      const {
+        product,
+        quantity,
+        price,
+        totalprice,
+        gramsperday,
+        dayspermonth,
+        familymembers,
+      } = item;
+
+      /// ------- CREATE ORDER ITEM -------
+      await OrderItemModel.create(
+        {
+          orderid: order.orderid,
+          bid: product.bid,
+          userid,
+          itemtype: "monthly",
+          productid: product.productid,
+          quantity: quantity,
+          price: price,
+          addressid: addressid,
+          giftcardid: null,
+          giftmessage: null,
+          giftcardprice: 0,
+          totalprice: totalprice,
+          itemstatus: "pending",
+          gramsperday,
+          dayspermonth,
+          familymembers,
+          ordertype: "monthly",
+          itemtype: "product"
+        },
+        { transaction },
+      );
+
+      /// ------- REDUCE STOCK -------
+      product.availablestock -= quantity;
+      await product.save({ transaction });
+    }
+
+    await MonthlyCalculatorModel.destroy({
+      where: { userid },
+      transaction,
+    });
+
+    await transaction.commit();
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        orderid: order.orderid,
+        totalamount,
+      }),
+    );
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+});
+
+// ------------ DATABASE STORAGE FUNCTIONS ------------
+
+export const addToMonthlyCart = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+    const { products } = req.body;
+
+    if (!userid) throw new ApiError(401, "User not authenticated");
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      throw new ApiError(400, "Products array is required");
+    }
+
+    await MonthlyCalculatorModel.destroy({
+      where: { userid },
+    });
+
+    const cartData = products.map((item) => {
+      if (
+        !item.bid ||
+        !item.productid ||
+        !item.gramsperday ||
+        !item.dayspermonth ||
+        !item.familymembers
+      ) {
+        throw new ApiError(
+          400,
+          "bid, productid, gramsperday, dayspermonth, familymembers are required for all products",
+        );
+      }
+      return {
+        userid,
+        bid: item.bid,
+        productid: item.productid,
+        gramsperday: item.gramsperday,
+        dayspermonth: item.dayspermonth,
+        familymembers: item.familymembers,
+      };
+    });
+
+    await MonthlyCalculatorModel.bulkCreate(cartData);
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Items added successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getMonthlyCart = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+
+    if (!userid) throw new ApiError(401, "User not authenticated");
+
+    const items = await MonthlyCalculatorModel.findAll({
+      where: { userid },
+      include: [
+        {
+          model: ProductModel,
+          as: "product",
+          required: true,
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    let totalamount = 0;
+
+    const formattedItems = items.map((item) => {
+      const product = item.product.dataValues;
+      const itemData = item.dataValues;
+
+      const activePrice = parseFloat(
+        product.sellingprice || product.price || 0,
+      );
+
+      const qtyPerPersonKg =
+        (itemData.gramsperday * itemData.dayspermonth) / 1000;
+
+      const totalQuantityKg = qtyPerPersonKg * itemData.familymembers;
+
+      totalamount += Math.round(totalQuantityKg * activePrice);
+
+      return {
+        monthlycartid: item.monthlycartid,
+        bid: itemData.bid,
+        userid: itemData.userid,
+        gramsperday: itemData.gramsperday,
+        dayspermonth: itemData.dayspermonth,
+        familymembers: itemData.familymembers,
+        productid: product.productid,
+        productname: product.productname,
+        productimage: product.productimage,
+        sellingprice: product.sellingprice,
+        price: product.price,
+        itemtype: product.itemtype,
+      };
+    });
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        items: formattedItems,
+        totalamount: totalamount,
+      }),
+    );
+  } catch (error) {
+    throw error;
+  }
 });

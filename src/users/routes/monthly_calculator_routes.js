@@ -1,19 +1,25 @@
 import express from "express";
 import { verifyToken } from "../../middleware/auth_middleware.js";
 import {
+  // calculateMonthlySubscription,
   getCalculatedProducts,
-  buyNowCalculator,
-  placeCalculatorOrder,
-  getUserCalculatorOrders,
-  getMerchantCalculatorOrders
+  placeMonthlySubscriptionOrder,
+  monthlyOrderSummary,
+  addToMonthlyCart,
+  getMonthlyCart,
 } from "../controller/monthly_calculator_controller.js";
 
 const router = express.Router();
 
 router.post("/calculator/products", verifyToken, getCalculatedProducts);
-router.post("/calculator/buy-now", verifyToken, buyNowCalculator);
-router.post("/calculator/place-order", verifyToken, placeCalculatorOrder);
-router.post("/calculator/user-orders", verifyToken, getUserCalculatorOrders);
-router.post("/calculator/merchant-orders", verifyToken, getMerchantCalculatorOrders);
+router.post("/calculator/order-summary", verifyToken, monthlyOrderSummary);
+router.post(
+  "/calculator/place-order",
+  verifyToken,
+  placeMonthlySubscriptionOrder,
+);
+
+router.post("/calculator/cart/add", verifyToken, addToMonthlyCart);
+router.post("/calculator/cart/get", verifyToken, getMonthlyCart);
 
 export default router;
