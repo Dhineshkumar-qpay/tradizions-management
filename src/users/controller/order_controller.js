@@ -127,6 +127,7 @@ export const placeOrder = asyncHandler(async (req, res) => {
     const order = await OrderModel.create(
       {
         userid,
+        bid: cartItems[0].product.bid,
         addressid: issameaddress ? addressid : 0,
         totalamount,
         orderstatus: "pending",
@@ -384,7 +385,7 @@ export const getMerchantOrders = asyncHandler(async (req, res) => {
     }
 
     const ordersItems = await OrderItemModel.findAll({
-      where: { bid },
+      where: { bid, ordertype: "normal" },
       include: [
         {
           model: OrderModel,

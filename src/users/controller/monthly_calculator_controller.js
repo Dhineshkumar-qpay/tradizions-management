@@ -234,6 +234,7 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
     const order = await OrderModel.create(
       {
         userid,
+        bid: cartItems[0].product.bid,
         addressid: addressid,
         totalamount,
         orderstatus: "pending",
@@ -275,7 +276,7 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
           dayspermonth,
           familymembers,
           itemtype: "product",
-          ordertype:"monthly"
+          ordertype: "monthly",
         },
         { transaction },
       );
@@ -384,8 +385,7 @@ export const getMonthlyOrderDetails = asyncHandler(async (req, res) => {
         product.sellingprice || product.price || 0,
       );
 
-      const qtyPerPersonKg =
-        (item.gramsperday * item.dayspermonth) / 1000;
+      const qtyPerPersonKg = (item.gramsperday * item.dayspermonth) / 1000;
 
       const totalQuantityKg = qtyPerPersonKg * item.familymembers;
       const calcultedprice = Math.round(activePrice * totalQuantityKg);
@@ -454,4 +454,38 @@ export const updateMonthlyOrderStatus = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, "Order Status Updated Successfully"));
+});
+
+export const getMerchantMonthlyOrders = asyncHandler(async (req, res) => {
+  try {
+    const { bid } = req.body;
+
+    if (!bid) {
+      throw new ApiError(400, "Business id is required");
+    }
+
+    const orders = await OrderModel.findAll({
+      where: { bid, ordertype: "monthly" },
+    });
+
+    const updatedOrders = orders.map((item) => {
+      return {
+        orderid: item.orderid,
+        userid: item.userid,
+        addressid: item.addressid,
+        totalamount: item.totalamount,
+        ordertype: item.ordertype,
+        orderstatus: item.orderstatus,
+        paymentstatus: item.paymentstatus,
+        paymentid: item.paymentid,
+        orderdate: item.createdAt
+          .toLocaleDateString("en-GB")
+          .replace(/\//g, "-"),
+      };
+    });
+
+    return res.status(200).json(new ApiResponse(200, updatedOrders));
+  } catch (error) {
+    throw error;
+  }
 });

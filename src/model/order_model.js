@@ -26,6 +26,14 @@ OrderModel.init(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
+    bid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: BusinessModel,
+        key: "bid",
+      },
+    },
     totalamount: {
       type: DataTypes.FLOAT,
       allowNull: false,
@@ -34,6 +42,7 @@ OrderModel.init(
       type: DataTypes.ENUM("normal", "monthly"),
       defaultValue: "normal",
     },
+
     orderstatus: {
       type: DataTypes.ENUM(
         "pending",
