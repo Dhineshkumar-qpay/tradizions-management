@@ -7,6 +7,8 @@ import {
   getGiftcards,
   getHomeProducts,
   searchProducts,
+  getFeaturedProducts,
+  getNewArrivalsProducts,
 } from "../controller/home_controller.js";
 import express from "express";
 
@@ -21,5 +23,7 @@ router.post("/product/gift-cards", getGiftcards);
 
 router.post("/product/get-home-products", getHomeProducts);
 router.post("/product/search", searchProducts);
+router.post("/product/featured", getFeaturedProducts);
+router.post("/product/new-arrivals", getNewArrivalsProducts);
 
 export default router;

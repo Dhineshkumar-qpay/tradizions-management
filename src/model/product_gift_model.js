@@ -82,11 +82,15 @@ ProductModel.init(
     },
     isTrending: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true,
+      defaultValue: false,
     },
     isBestSeller: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true,
+      defaultValue: false,
+    },
+    isNewArrivals: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
     },
     isActive: {
       type: DataTypes.BOOLEAN,
@@ -306,7 +310,7 @@ ProductReviewModel.init(
   },
 );
 
-export { ProductModel, ProductImagesModel, ProductReviewModel ,GiftcardModel};
+export { ProductModel, ProductImagesModel, ProductReviewModel, GiftcardModel };
 
 ProductModel.hasMany(ProductImagesModel, {
   foreignKey: "productid",

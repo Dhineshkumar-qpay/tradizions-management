@@ -214,56 +214,113 @@ export const getHomeProducts = asyncHandler(async (req, res) => {
     "isFavourite",
   ];
   try {
-    const [featuredProducts, newArrivalProducts, giftHampers, poojaHampers] =
-      await Promise.all([
-        ProductModel.findAll({
-          where: {
-            isFeatured: true,
-            itemtype: "product",
-          },
-          order: [["createdAt", "DESC"]],
-          attributes: attributes,
-          limit: 10,
-        }),
+    const [giftHampers, poojaHampers] = await Promise.all([
+      ProductModel.findAll({
+        where: {
+          itemtype: "gift",
+          gifttype: "nuts",
+        },
+        order: [["createdAt", "DESC"]],
+        attributes: attributes,
+        limit: 10,
+      }),
 
-        ProductModel.findAll({
-          where: {
-            itemtype: "product",
-          },
-          order: [["createdAt", "DESC"]],
-          attributes: attributes,
-          limit: 10,
-        }),
-
-        ProductModel.findAll({
-          where: {
-            itemtype: "gift",
-            gifttype: "nuts",
-          },
-          order: [["createdAt", "DESC"]],
-          attributes: attributes,
-          limit: 10,
-        }),
-
-        ProductModel.findAll({
-          where: {
-            itemtype: "gift",
-            gifttype: "pooja",
-          },
-          order: [["createdAt", "DESC"]],
-          attributes: attributes,
-          limit: 10,
-        }),
-      ]);
+      ProductModel.findAll({
+        where: {
+          itemtype: "gift",
+          gifttype: "pooja",
+        },
+        order: [["createdAt", "DESC"]],
+        attributes: attributes,
+        limit: 10,
+      }),
+    ]);
 
     const updatedHomeProducts = {
-      featured: featuredProducts,
-      newarrivals: newArrivalProducts,
       gifthampers: giftHampers,
       poojahampers: poojaHampers,
     };
 
     return res.status(200).json(new ApiResponse(200, updatedHomeProducts));
+  } catch (error) {
+    throw error;
+  }
+});
+export const getFeaturedProducts = asyncHandler(async (req, res) => {
+  const { limit = 20, page = 1 } = req.body;
+
+  const attributes = [
+    "productid",
+    "bid",
+    "productimage",
+    "productname",
+    "description",
+    "categoryid",
+    "subcategoryid",
+    "price",
+    "availablestock",
+    "weight",
+    "unit",
+    "sellingprice",
+    "isFavourite",
+  ];
+
+  try {
+    const feturedProducts = await ProductModel.findAll({
+      where: {
+        isFeatured: true,
+        itemtype: "product",
+      },
+      order: [["createdAt", "DESC"]],
+      attributes,
+      limit: Number(limit),
+      offset: (Number(page) - 1) * Number(limit),
+    });
+
+    return res.status(200).json({
+      success: true,
+      products: feturedProducts,
+    });
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getNewArrivalsProducts = asyncHandler(async (req, res) => {
+  const { limit = 20, page = 1 } = req.body;
+
+  const attributes = [
+    "productid",
+    "bid",
+    "productimage",
+    "productname",
+    "description",
+    "categoryid",
+    "subcategoryid",
+    "price",
+    "availablestock",
+    "weight",
+    "unit",
+    "sellingprice",
+    "isFavourite",
+  ];
+
+  try {
+    const newArrivalProducts = await ProductModel.findAll({
+      where: {
+        isNewArrivals: true,
+        itemtype: "product",
+      },
+      order: [["createdAt", "DESC"]],
+      attributes,
+      limit: Number(limit),
+      offset: (Number(page) - 1) * Number(limit),
+    });
+
+    return res.status(200).json({
+      success: true,
+      products: newArrivalProducts,
+    });
   } catch (error) {
     throw error;
   }
