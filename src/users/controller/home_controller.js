@@ -246,8 +246,9 @@ export const getHomeProducts = asyncHandler(async (req, res) => {
     throw error;
   }
 });
+
 export const getFeaturedProducts = asyncHandler(async (req, res) => {
-  const { limit = 20, page = 1 } = req.body;
+  const { limit = 20, page = 1, sortBy, priceRange } = req.body;
 
   const attributes = [
     "productid",
@@ -266,12 +267,57 @@ export const getFeaturedProducts = asyncHandler(async (req, res) => {
   ];
 
   try {
-    const feturedProducts = await ProductModel.findAll({
-      where: {
-        isFeatured: true,
-        itemtype: "product",
-      },
-      order: [["createdAt", "DESC"]],
+    let whereCondition = {
+      isFeatured: true,
+      itemtype: "product",
+    };
+
+    let priceCondition = null;
+
+    switch (priceRange) {
+      case "under500":
+        priceCondition = { [Op.lt]: 500 };
+        break;
+
+      case "500to1000":
+        priceCondition = { [Op.between]: [500, 1000] };
+        break;
+
+      case "1000to1500":
+        priceCondition = { [Op.between]: [1000, 1500] };
+        break;
+
+      case "above1500":
+        priceCondition = { [Op.gt]: 1500 };
+        break;
+
+      default:
+        break;
+    }
+
+    if (priceCondition) {
+      whereCondition[Op.or] = [
+        {
+          sellingprice: priceCondition,
+        },
+        {
+          price: priceCondition,
+        },
+      ];
+    }
+
+    
+    let order = [["createdAt", "DESC"]];
+
+    if (sortBy === "lowToHigh") {
+      order = [["sellingprice", "ASC"]];
+    } else if (sortBy === "highToLow") {
+      order = [["sellingprice", "DESC"]];
+    }
+
+    const featuredProducts = await ProductModel.findAll({
+      where: whereCondition,
+      order,
       attributes,
       limit: Number(limit),
       offset: (Number(page) - 1) * Number(limit),
@@ -279,7 +325,7 @@ export const getFeaturedProducts = asyncHandler(async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      products: feturedProducts,
+      products: featuredProducts,
     });
   } catch (error) {
     throw error;
@@ -287,7 +333,7 @@ export const getFeaturedProducts = asyncHandler(async (req, res) => {
 });
 
 export const getNewArrivalsProducts = asyncHandler(async (req, res) => {
-  const { limit = 20, page = 1 } = req.body;
+  const { limit = 20, page = 1, sortBy, priceRange } = req.body;
 
   const attributes = [
     "productid",
@@ -306,12 +352,53 @@ export const getNewArrivalsProducts = asyncHandler(async (req, res) => {
   ];
 
   try {
+    let whereCondition = {
+      isNewArrivals: true,
+      itemtype: "product",
+    };
+
+    if (priceRange) {
+      switch (priceRange) {
+        case "under500":
+          whereCondition.sellingprice = {
+            [Op.lt]: 500,
+          };
+          break;
+
+        case "500to1000":
+          whereCondition.sellingprice = {
+            [Op.between]: [500, 1000],
+          };
+          break;
+
+        case "1000to1500":
+          whereCondition.sellingprice = {
+            [Op.between]: [1000, 1500],
+          };
+          break;
+
+        case "above1500":
+          whereCondition.sellingprice = {
+            [Op.gt]: 1500,
+          };
+          break;
+
+        default:
+          break;
+      }
+    }
+
+    let order = [["createdAt", "DESC"]];
+
+    if (sortBy === "lowToHigh") {
+      order = [["sellingprice", "ASC"]];
+    } else if (sortBy === "highToLow") {
+      order = [["sellingprice", "DESC"]];
+    }
+
     const newArrivalProducts = await ProductModel.findAll({
-      where: {
-        isNewArrivals: true,
-        itemtype: "product",
-      },
-      order: [["createdAt", "DESC"]],
+      where: whereCondition,
+      order,
       attributes,
       limit: Number(limit),
       offset: (Number(page) - 1) * Number(limit),
