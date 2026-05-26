@@ -47,7 +47,6 @@ OrderModel.init(
       type: DataTypes.ENUM(
         "pending",
         "confirmed",
-        "processing",
         "packed",
         "shipped",
         "outfordelivery",
@@ -157,7 +156,6 @@ OrderItemModel.init(
       type: DataTypes.ENUM(
         "pending",
         "confirmed",
-        "processing",
         "packed",
         "shipped",
         "outfordelivery",

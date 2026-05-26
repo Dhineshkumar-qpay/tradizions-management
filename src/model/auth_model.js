@@ -51,4 +51,27 @@ AuthModel.init(
   },
 );
 
-export { AuthModel };
+class NewsLetterModel extends Model {}
+
+NewsLetterModel.init(
+  {
+    newsletterid: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+  },
+  {
+    sequelize,
+    tableName: "newsletter",
+    modelName: "NewsLetterModel",
+    timestamps: true,
+  },
+);
+
+export { AuthModel, NewsLetterModel };

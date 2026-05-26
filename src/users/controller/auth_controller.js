@@ -1,4 +1,4 @@
-import { AuthModel } from "../../model/auth_model.js";
+import { AuthModel, NewsLetterModel } from "../../model/auth_model.js";
 import { sendOTPEmail } from "../../../config/mailer.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
@@ -148,6 +148,34 @@ export const updateProfile = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, "Profile updated successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const addToNewsletter = asyncHandler(async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new ApiError(400, "Email is required");
+    }
+
+    const existingEmail = await NewsLetterModel.findOne({
+      where: { email: email },
+    });
+
+    if (existingEmail) {
+      throw new ApiError(409, "Email already subscribed");
+    }
+
+    await NewsLetterModel.create({
+      email: email,
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Email added to newsletter successfully"));
   } catch (error) {
     throw error;
   }

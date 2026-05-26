@@ -220,120 +220,208 @@ export const placeOrder = asyncHandler(async (req, res) => {
   }
 });
 
-export const getOrderItems = asyncHandler(async (req, res) => {
+export const getUserOrders = asyncHandler(async (req, res) => {
   try {
-    const userid = req.user?.userid;
-    const { itemtype } = req.body;
-
-    let whereClause = { userid };
-
-    if (itemtype) {
-      whereClause.itemtype = itemtype;
-      whereClause.ordertype = "normal"
-    }
-
-    const orderItems = await OrderItemModel.findAll({
-      where: whereClause,
+    const orders = await OrderModel.findAll({
+      where: {
+        userid: req.user?.userid,
+      },
       attributes: {
         exclude: ["createdAt", "updatedAt"],
       },
+      order: [["createdAt", "DESC"]],
     });
 
-    const updatedOrderItems = await Promise.all(
-      orderItems.map(async (item) => {
-        const product = await ProductModel.findOne({
-          where: { productid: item.productid },
+    const updatedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const orderItems = await OrderItemModel.findAll({
+          where: {
+            orderid: order.orderid,
+          },
+          include: [
+            {
+              model: ProductModel,
+              as: "product",
+              attributes: ["productid", "productname", "productimage"],
+            },
+            {
+              model: GiftcardModel,
+              as: "giftcard",
+              attributes: ["giftcardid", "cardname", "cardimage"],
+            },
+          ],
         });
 
-        if (!product) return null;
+        const items = orderItems.map((item) => ({
+          ...item.product.dataValues,
+        }));
 
         return {
-          ...item.dataValues,
-          productname: product.productname,
-          productimage: product.productimage,
-          categoryname: product.categoryname,
+          ...order.dataValues,
+          items: items,
         };
       }),
     );
 
-    return res.status(200).json(new ApiResponse(200, updatedOrderItems));
+    return res.status(200).json(new ApiResponse(200, updatedOrders));
   } catch (error) {
     throw error;
   }
+  s;
 });
 
 export const orderDetails = asyncHandler(async (req, res) => {
   try {
-    const { orderitemid } = req.body;
+    const { orderid } = req.body;
 
-    if (!orderitemid) throw new ApiError(400, "Order Id is required");
-
-    const orderItem = await OrderItemModel.findOne({
-      where: { orderitemid },
-      attributes: {
-        exclude: ["createdAt", "updatedAt"],
-      },
-    });
-
-    if (!orderItem) throw new ApiError(404, "Order Item not found");
-
-    const address = await AddressModel.findOne({
-      where: { addressid: orderItem.addressid },
-      attributes: {
-        exclude: ["createdAt", "updatedAt"],
-      },
-    });
-
-    const product = await ProductModel.findOne({
-      where: { productid: orderItem.productid },
-      attributes: ["productid", "bid", "productname", "productimage"],
-    });
-
-    let giftDetails = null;
-    let orderDetails;
-
-    orderDetails = {
-      orderitemid: orderItem.orderitemid,
-      orderid: orderItem.orderid,
-      quantity: orderItem.quantity,
-      price: orderItem.price,
-      totalprice: orderItem.totalprice,
-      itemstatus: orderItem.itemstatus,
-      ordertype: orderItem.ordertype || "normal",
-      gramsperday: orderItem.gramsperday || null,
-      dayspermonth: orderItem.dayspermonth || null,
-      familymembers: orderItem.familymembers || null,
-    };
-
-    if (orderItem.giftcardid) {
-      const giftcard = await GiftcardModel.findOne({
-        where: {
-          giftcardid: orderItem.giftcardid,
-        },
-      });
-
-      giftDetails = {
-        giftcardid: giftcard.giftcardid,
-        giftcardimage: giftcard.cardimage,
-        giftcardname: giftcard.cardname,
-        giftcardprice: giftcard.cardprice,
-        giftmessage: orderItem.giftmessage,
-      };
+    if (!orderid) {
+      throw new ApiError(400, "Order ID is required");
     }
+
+    const order = await OrderModel.findOne({
+      where: { orderid },
+      attributes: {
+        exclude: ["createdAt", "updatedAt"],
+      },
+    });
+
+    if (!order) {
+      throw new ApiError(404, "Order not found");
+    }
+
+    const orderItems = await OrderItemModel.findAll({
+      where: {
+        orderid: orderid,
+      },
+      attributes: {
+        exclude: ["createdAt", "updatedAt"],
+      },
+      include: [
+        {
+          model: ProductModel,
+          as: "product",
+          required: false,
+          attributes: [
+            "productid",
+            "bid",
+            "productname",
+            "productimage",
+            "price",
+            "sellingprice",
+            "itemtype",
+          ],
+        },
+        {
+          model: GiftcardModel,
+          as: "giftcard",
+          required: false,
+          attributes: ["giftcardid", "cardname", "cardimage", "cardprice"],
+        },
+        {
+          model: AddressModel,
+          as: "address",
+          required: false,
+          attributes: [
+            "addressid",
+            "addressline",
+            "landmark",
+            "city",
+            "district",
+            "state",
+            "pincode",
+          ],
+        },
+      ],
+    });
+
+    let formattedAddress = null;
+
+    const formattedItems = orderItems.map((item) => {
+      const product = item.product || null;
+      let giftcard = item.giftcard || null;
+      const address = item.address || null;
+
+      if (address) {
+        formattedAddress = `${address.addressline}, ${address.landmark}, ${address.city}, ${address.district}, ${address.state}, ${address.pincode}`;
+      }
+
+      let quantitypersonkg = null;
+      let totalquantitykg = null;
+      let calculatedprice = null;
+
+      if (item.gramsperday && item.dayspermonth && item.familymembers) {
+        const activePrice = parseFloat(
+          product?.sellingprice || product?.price || 0,
+        );
+
+        quantitypersonkg = (item.gramsperday * item.dayspermonth) / 1000;
+
+        totalquantitykg = quantitypersonkg * item.familymembers;
+
+        calculatedprice = Math.round(activePrice * totalquantitykg);
+      }
+
+      if (giftcard) {
+        giftcard = {
+          giftcardid: giftcard.giftcardid,
+          cardname: giftcard.cardname,
+          cardimage: giftcard.cardimage,
+          cardprice: giftcard.cardprice,
+          giftmessage: item.giftmessage,
+        };
+      }
+
+      return {
+        orderitemid: item.orderitemid,
+        orderid: item.orderid,
+        userid: item.userid,
+        quantity: item.quantity,
+        price: item.price,
+        giftmessage: item.giftmessage,
+        totalprice: item.totalprice,
+        itemstatus: item.itemstatus,
+        ordertype: item.ordertype,
+
+        gramsperday: item.gramsperday || null,
+        dayspermonth: item.dayspermonth || null,
+        familymembers: item.familymembers || null,
+
+        quantitypersonkg:
+          quantitypersonkg !== null
+            ? parseFloat(quantitypersonkg.toFixed(2))
+            : null,
+
+        totalquantitykg:
+          totalquantitykg !== null
+            ? parseFloat(totalquantitykg.toFixed(2))
+            : null,
+
+        calculatedprice: calculatedprice,
+
+        product: product,
+        giftcard: giftcard,
+        address: address,
+      };
+    });
 
     return res.status(200).json(
       new ApiResponse(200, {
-        orderdetails: orderDetails,
-        product: product,
-        giftcard: giftDetails,
-        address: address,
+        order: {
+          orderid: order.orderid,
+          totalamount: order.totalamount,
+          orderstatus: order.orderstatus,
+          paymentstatus: order.paymentstatus,
+          paymentmethod: order.paymentmethod,
+          ordertype: order.ordertype,
+          address: formattedAddress,
+        },
+        items: formattedItems,
       }),
     );
   } catch (error) {
     throw error;
   }
 });
-
 // ------------------------ User Orders ------------------------
 
 export const getAlluserOrders = asyncHandler(async (req, res) => {
@@ -384,99 +472,48 @@ export const getMerchantOrders = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Business id is required");
     }
 
-    const ordersItems = await OrderItemModel.findAll({
-      where: { bid, ordertype: "normal" },
-      include: [
-        {
-          model: OrderModel,
-          as: "order",
-          attributes: ["userid", "totalamount", "orderstatus"],
-        },
-        {
-          model: ProductModel,
-          as: "product",
-          attributes: ["productid", "productname", "productimage", "itemtype"],
-        },
-        {
-          model: AddressModel,
-          as: "address",
-          attributes: [
-            "addressid",
-            "addressline",
-            "landmark",
-            "city",
-            "district",
-            "state",
-            "pincode",
-          ],
-        },
-        {
-          model: AuthModel,
-          as: "user",
-          attributes: ["username", "email", "phone"],
-        },
-      ],
+    const orders = await OrderModel.findAll({
+      where: {
+        bid: bid,
+      },
+      attributes: {
+        exclude: ["createdAt", "updatedAt"],
+      },
       order: [["createdAt", "DESC"]],
     });
 
-    const updatedOrderItems = await Promise.all(
-      ordersItems.map(async (item) => {
-        let giftDetails = {};
+    const updatedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const orderItems = await OrderItemModel.findAll({
+          where: {
+            orderid: order.orderid,
+          },
+          include: [
+            {
+              model: ProductModel,
+              as: "product",
+              attributes: ["productid", "productname", "productimage"],
+            },
+            {
+              model: GiftcardModel,
+              as: "giftcard",
+              attributes: ["giftcardid", "cardname", "cardimage"],
+            },
+          ],
+        });
 
-        const order = item.order.dataValues;
-        const product = item.product.dataValues;
-        const { user, address } = item.dataValues;
-
-        const [year, month, day] = item.createdAt
-          .toISOString()
-          .split("T")[0]
-          .split("-");
-
-        const formatedDate = `${day}-${month}-${year}`;
-
-        if (item.giftcardid) {
-          giftDetails = await GiftcardModel.findOne({
-            where: { giftcardid: item.giftcardid },
-          });
-        }
+        const items = orderItems.map((item) => ({
+          ...item.product.dataValues,
+        }));
 
         return {
-          orderid: order.orderid,
-          orderitemid: item.orderitemid,
-          userid: order.userid,
-          orderstatus: order.orderstatus,
-          username: user.username,
-          email: user.email,
-          phone: user.phone,
-          itemtype: product.itemtype,
-          productname: product.productname,
-          productimage: product.productimage,
-          quantity: item.quantity,
-          price: item.price,
-          addressid: address.addressid,
-          addressline: address.addressline,
-          landmark: address.landmark,
-          city: address.city,
-          district: address.district,
-          state: address.state,
-          pincode: address.pincode,
-          totalprice: item.totalprice,
-          itemstatus: item.itemstatus,
-          ordertype: item.ordertype || "normal",
-          gramsperday: item.gramsperday || null,
-          dayspermonth: item.dayspermonth || null,
-          familymembers: item.familymembers || null,
-          giftcardid: giftDetails.giftcardid || 0,
-          giftcardname: giftDetails.cardname,
-          giftcardimage: giftDetails.cardimage || null,
-          giftcardprice: giftDetails.cardprice || null,
-          giftmessage: item.giftmessage || null,
-          odredate: formatedDate,
+          ...order.dataValues,
+          items: items,
         };
       }),
     );
 
-    return res.status(200).json(new ApiResponse(200, updatedOrderItems));
+    return res.status(200).json(new ApiResponse(200, updatedOrders));
   } catch (error) {
     throw error;
   }
@@ -484,7 +521,47 @@ export const getMerchantOrders = asyncHandler(async (req, res) => {
 
 export const updateOrderStatus = asyncHandler(async (req, res) => {
   try {
-    const userid = req.user?.userid;
+    const { orderid, orderstatus } = req.body;
+
+    if (!orderid) {
+      throw new ApiError(400, "Order Id is required");
+    }
+
+    if (!orderstatus) {
+      throw new ApiError(400, "Order Status is required");
+    }
+
+    const order = await OrderModel.findOne({
+      where: { orderid },
+    });
+
+    if (!order) {
+      throw new ApiError(404, "Order not found");
+    }
+
+    order.orderstatus = orderstatus;
+    await order.save();
+
+    await OrderItemModel.update(
+      {
+        itemstatus: orderstatus,
+      },
+      {
+        where: {
+          orderid: orderid,
+        },
+      },
+    );
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Order Status Updated Successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+export const updateOrderItemStatus = asyncHandler(async (req, res) => {
+  try {
     const { orderitemid, itemstatus } = req.body;
 
     if (!orderitemid) {

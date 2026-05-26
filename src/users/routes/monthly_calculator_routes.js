@@ -5,8 +5,6 @@ import {
   placeMonthlyOrder,
   addToMonthlyCart,
   getMonthlyCart,
-  getMonthlyOrders,
-  getMonthlyOrderDetails,
   updateMonthlyOrderStatus,
   getMerchantMonthlyOrders,
 } from "../controller/monthly_calculator_controller.js";
@@ -21,8 +19,7 @@ router.post(
   verifyToken,
   placeMonthlyOrder,
 );
-router.post("/calculator/orders", verifyToken, getMonthlyOrders);
-router.post("/calculator/order-detail", verifyToken, getMonthlyOrderDetails);
+
 router.post("/calculator/update-order-status", verifyToken, updateMonthlyOrderStatus);
 router.post("/calculator/merchant-orders", verifyToken, getMerchantMonthlyOrders);
 
