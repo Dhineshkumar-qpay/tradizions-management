@@ -1,343 +1,468 @@
 import { transporter } from "../../../config/mailConfig.js";
 
-const normalProductsOrder = (ordersData) => {
+export const normalProductsOrder = (ordersData) => {
+  const renderAddress = (addr) => {
+    if (!addr) return "—";
+    return [
+      addr.fullname || "",
+      addr.addressline || "",
+      addr.landmark || "",
+      `${addr.city || ""} - ${addr.pincode || ""}`,
+      `${addr.state || ""}, ${addr.country || ""}`,
+    ]
+      .filter(Boolean)
+      .join("<br/>");
+  };
+
+  // Accent = olive green
+  const accent = "#5a7a2e";
+  const accentLight = "#eef5e0";
+
   return {
-    html: `
-<!DOCTYPE html>
+    html: `<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Order Confirmation</title>
 </head>
+<body style="margin:0;padding:0;background:#f0f2f5;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f2f5;padding:32px 0;">
+<tr><td align="center">
+<table width="640" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.09);">
 
-<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;">
+  <!-- HEADER -->
+  <tr>
+    <td style="background:#1a2c52;padding:28px 40px;text-align:center;">
+      <table cellpadding="0" cellspacing="0" style="margin:0 auto 14px;">
+        <tr>
+          <td style="width:54px;height:54px;border-radius:50%;background:#ffffff;text-align:center;vertical-align:middle;">
+            <span style="font-size:26px;color:#1a2c52;font-weight:900;line-height:54px;">&#10003;</span>
+          </td>
+        </tr>
+      </table>
+      <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700;">Order Placed Successfully!</h1>
+      <p style="color:#b0bedc;margin:8px 0 0;font-size:14px;">Thank you for shopping with us. Your order has been received.</p>
+    </td>
+  </tr>
 
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f4;padding:30px 0;">
-<tr>
-<td align="center">
+  <!-- ORDER NUMBER BAR -->
+  <tr>
+    <td style="padding:20px 32px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #dde3ec;border-radius:7px;">
+        <tr>
+          <td style="padding:16px 20px;border-right:1px solid #dde3ec;" width="50%">
+            <p style="margin:0;color:#888;font-size:12px;">Order Number</p>
+            <p style="margin:5px 0 0;color:#1a2c52;font-size:17px;font-weight:700;">#${ordersData?.orderId || ""}</p>
+          </td>
+          <td style="padding:16px 20px;" width="50%">
+            <p style="margin:0;color:#888;font-size:12px;">Order Date</p>
+            <p style="margin:5px 0 0;color:#1a2c52;font-size:16px;font-weight:700;">${ordersData?.orderDate || ""}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
 
-<table width="700" cellpadding="0" cellspacing="0" border="0"
-style="background:#ffffff;border-radius:10px;overflow:hidden;">
-
-    <!-- HEADER -->
-    <tr>
-        <td style="background:#111827;padding:25px;text-align:center;">
-            <h1 style="color:#ffffff;margin:0;font-size:28px;">
-                Order Confirmed
-            </h1>
-            <p style="color:#d1d5db;margin-top:8px;font-size:14px;">
-                Thank you for your purchase
+  <!-- CUSTOMER + ADDRESS -->
+  <tr>
+    <td style="padding:0 32px 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #dde3ec;border-radius:7px;overflow:hidden;">
+        <tr>
+          <td width="50%" valign="top" style="padding:18px 20px;border-right:1px solid #dde3ec;">
+            <p style="margin:0 0 12px;color:${accent};font-size:14px;font-weight:700;">
+              <span style="margin-right:6px;">&#128100;</span> Customer Details
             </p>
-        </td>
-    </tr>
-
-    <!-- SUCCESS MESSAGE -->
-    <tr>
-        <td style="padding:30px;">
-            <h2 style="margin:0;color:#111827;font-size:22px;">
-                Hi {{customerName}}
-            </h2>
-
-            <p style="color:#4b5563;font-size:15px;line-height:24px;margin-top:15px;">
-                Your order has been placed successfully.
-                We’re preparing your items for shipment and will notify you once your order is shipped.
+            <table cellpadding="4" cellspacing="0">
+              <tr>
+                <td style="color:#555;font-size:13px;white-space:nowrap;">Name</td>
+                <td style="color:#555;font-size:13px;padding:0 6px;">:</td>
+                <td style="color:#222;font-size:13px;">${ordersData?.customerName || ""}</td>
+              </tr>
+              <tr>
+                <td style="color:#555;font-size:13px;white-space:nowrap;">Email</td>
+                <td style="color:#555;font-size:13px;padding:0 6px;">:</td>
+                <td style="color:#222;font-size:13px;">${ordersData?.customerEmail || ""}</td>
+              </tr>
+              <tr>
+                <td style="color:#555;font-size:13px;white-space:nowrap;">Phone</td>
+                <td style="color:#555;font-size:13px;padding:0 6px;">:</td>
+                <td style="color:#222;font-size:13px;">${ordersData?.customerPhone || ""}</td>
+              </tr>
+            </table>
+          </td>
+          <td width="50%" valign="top" style="padding:18px 20px;">
+            <p style="margin:0 0 12px;color:${accent};font-size:14px;font-weight:700;">
+              <span style="margin-right:6px;">&#128205;</span> Shipping Address
             </p>
-
-            <table width="100%" cellpadding="0" cellspacing="0"
-            style="margin-top:25px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
-                <tr>
-                    <td style="padding:20px;">
-
-                        <table width="100%">
-                            <tr>
-                                <td>
-                                    <p style="margin:0;color:#6b7280;font-size:13px;">
-                                        Order ID
-                                    </p>
-                                    <p style="margin:5px 0 0;font-weight:bold;color:#111827;">
-                                        #{{orderId}}
-                                    </p>
-                                </td>
-
-                                <td align="right">
-                                    <p style="margin:0;color:#6b7280;font-size:13px;">
-                                        Order Date
-                                    </p>
-                                    <p style="margin:5px 0 0;font-weight:bold;color:#111827;">
-                                        {{orderDate}}
-                                    </p>
-                                </td>
-                            </tr>
-                        </table>
-
-                    </td>
-                </tr>
-            </table>
-
-        </td>
-    </tr>
-
-    <!-- CUSTOMER DETAILS -->
-    <tr>
-        <td style="padding:0 30px 30px;">
-
-            <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-
-                    <!-- CUSTOMER -->
-                    <td width="48%" valign="top"
-                    style="border:1px solid #e5e7eb;border-radius:8px;padding:20px;">
-
-                        <h3 style="margin-top:0;color:#111827;">
-                            Customer Details
-                        </h3>
-
-                        <p style="margin:8px 0;color:#4b5563;">
-                            <strong>Name:</strong> {{customerName}}
-                        </p>
-
-                        <p style="margin:8px 0;color:#4b5563;">
-                            <strong>Email:</strong> {{customerEmail}}
-                        </p>
-
-                        <p style="margin:8px 0;color:#4b5563;">
-                            <strong>Phone:</strong> {{customerPhone}}
-                        </p>
-
-                    </td>
-
-                    <td width="4%"></td>
-
-                    <!-- ADDRESS -->
-                    <td width="48%" valign="top"
-                    style="border:1px solid #e5e7eb;border-radius:8px;padding:20px;">
-
-                        <h3 style="margin-top:0;color:#111827;">
-                            Shipping Address
-                        </h3>
-
-                        <p style="margin:8px 0;color:#4b5563;line-height:24px;">
-                            {{addressLine1}}<br/>
-                            {{addressLine2}}<br/>
-                            {{city}} - {{pincode}}<br/>
-                            {{state}}, {{country}}
-                        </p>
-
-                    </td>
-
-                </tr>
-            </table>
-
-        </td>
-    </tr>
-
-    <!-- PRODUCTS -->
-    <tr>
-        <td style="padding:0 30px 30px;">
-
-            <h2 style="color:#111827;margin-bottom:20px;">
-                Order Items
-            </h2>
-
-            <!-- PRODUCT LOOP START -->
-            <!-- Repeat this block -->
-
-            <table width="100%" cellpadding="0" cellspacing="0"
-            style="border:1px solid #e5e7eb;border-radius:8px;margin-bottom:15px;">
-
-                <tr>
-
-                    <!-- IMAGE -->
-                    <td width="120" style="padding:15px;">
-                        <img src="{{productImage}}"
-                        width="100"
-                        height="100"
-                        style="border-radius:8px;object-fit:cover;border:1px solid #e5e7eb;" />
-                    </td>
-
-                    <!-- DETAILS -->
-                    <td style="padding:15px;">
-
-                        <h3 style="margin:0;color:#111827;font-size:18px;">
-                            {{productName}}
-                        </h3>
-
-                        <p style="margin:8px 0;color:#6b7280;font-size:14px;">
-                            Quantity: {{quantity}}
-                        </p>
-
-                        <p style="margin:8px 0;color:#6b7280;font-size:14px;">
-                            Price: ₹{{price}}
-                        </p>
-
-                    </td>
-
-                    <!-- TOTAL -->
-                    <td align="right" style="padding:15px;">
-                        <h3 style="margin:0;color:#111827;">
-                            ₹{{total}}
-                        </h3>
-                    </td>
-
-                </tr>
-
-            </table>
-
-            <!-- PRODUCT LOOP END -->
-
-        </td>
-    </tr>
-
-    <!-- AMOUNT DETAILS -->
-    <tr>
-        <td style="padding:0 30px 30px;">
-
-            <table width="100%" cellpadding="0" cellspacing="0"
-            style="border:1px solid #e5e7eb;border-radius:8px;">
-
-                <tr>
-                    <td style="padding:20px;">
-
-                        <table width="100%" cellpadding="8">
-
-                            <tr>
-                                <td style="color:#6b7280;">
-                                    Subtotal
-                                </td>
-
-                                <td align="right" style="color:#111827;">
-                                    ₹{{subtotal}}
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td style="color:#6b7280;">
-                                    Delivery Charge
-                                </td>
-
-                                <td align="right" style="color:#111827;">
-                                    ₹{{deliveryCharge}}
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td style="color:#6b7280;">
-                                    Tax
-                                </td>
-
-                                <td align="right" style="color:#111827;">
-                                    ₹{{tax}}
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td colspan="2">
-                                    <hr style="border:none;border-top:1px solid #e5e7eb;">
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td style="font-size:18px;font-weight:bold;color:#111827;">
-                                    Grand Total
-                                </td>
-
-                                <td align="right"
-                                style="font-size:20px;font-weight:bold;color:#111827;">
-                                    ₹{{grandTotal}}
-                                </td>
-                            </tr>
-
-                        </table>
-
-                    </td>
-                </tr>
-
-            </table>
-
-        </td>
-    </tr>
-
-    <!-- FOOTER -->
-    <tr>
-        <td style="background:#f9fafb;padding:25px;text-align:center;">
-
-            <p style="margin:0;color:#6b7280;font-size:14px;">
-                If you have any questions, contact our support team.
+            ${
+              ordersData?.issameaddress !== false
+                ? `
+            <p style="margin:0;color:#333;font-size:13px;line-height:22px;">
+              ${ordersData?.addressLine1 || ""}<br/>
+              ${ordersData?.addressLine2 ? ordersData.addressLine2 + "<br/>" : ""}
+              ${ordersData?.city || ""} - ${ordersData?.pincode || ""}<br/>
+              ${ordersData?.state || ""}, ${ordersData?.country || ""}
             </p>
+            `
+                : `<p style="margin:0;color:#777;font-size:13px;font-style:italic;">See per-item address below</p>`
+            }
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
 
-            <p style="margin-top:10px;color:#111827;font-weight:bold;">
-                Thank You for Shopping With Us
-            </p>
+  <!-- ORDER ITEMS -->
+  <tr>
+    <td style="padding:0 32px 6px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #dde3ec;border-radius:7px;overflow:hidden;">
+        <!-- HEADING -->
+        <tr>
+          <td colspan="4" style="padding:14px 18px;border-bottom:1px solid #dde3ec;">
+            <p style="margin:0;color:${accent};font-size:14px;font-weight:700;">&#128722; Order Items</p>
+          </td>
+        </tr>
+        <!-- TABLE HEADER -->
+        <tr style="background:#f8f9fb;">
+          <td style="padding:10px 18px;color:#555;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eaecf0;" width="45%">Product</td>
+          <td style="padding:10px 12px;color:#555;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eaecf0;text-align:center;" width="20%">Price</td>
+          <td style="padding:10px 12px;color:#555;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eaecf0;text-align:center;" width="15%">Quantity</td>
+          <td style="padding:10px 18px;color:#555;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eaecf0;text-align:right;" width="20%">Total</td>
+        </tr>
 
-        </td>
-    </tr>
-
-</table>
-
-</td>
-</tr>
-</table>
-
-</body>
-</html>
-`,
-  };
-};
-
-const monthlyProductsOrders = (ordersData) => {
-  return {
-    subject: "Monthly Orders Summary",
-    html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-            <div style="background-color: #007bff; color: white; padding: 15px; text-align: center;">
-                <h2>New Order Received</h2>
-            </div>
-            <div style="padding: 20px;">
-                <p>Hello Admin,</p>
-                <p>You have received a new order.</p>
-                <h3>Order Details:</h3>
-                <ul>
-                    ${ordersData
-                      .map(
-                        (order) => `
-                        <li>
-                            <strong>Product:</strong> ${order.productName}<br/>
-                            <strong>Quantity:</strong> ${order.quantity}<br/>
-                            <strong>Total Price:</strong> ₹${order.totalPrice}
-                        </li>
-                    `,
-                      )
-                      .join("")}
-                </ul>
-                <p>Thank you!</p>
-            </div>
-        </div>
+        <!-- PRODUCT ROWS -->
+        ${(ordersData?.items || [])
+          .map(
+            (item, index) => `
+        <tr style="border-bottom:1px solid #f0f2f5;">
+          <td style="padding:14px 18px;vertical-align:middle;">
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding-right:12px;vertical-align:middle;">
+                  <img src="${item.productImage && item.productImage.includes("http") ? item.productImage : "http://localhost:3000" + (item.productImage || "")}"
+                    width="54" height="54" style="border-radius:6px;object-fit:cover;display:block;border:1px solid #e0e0e0;" alt="${item.productName || ""}"/>
+                </td>
+                <td style="vertical-align:middle;">
+                  <p style="margin:0;color:#1a2c52;font-size:14px;font-weight:600;">${item.productName || ""}</p>
+                  ${
+                    !ordersData?.issameaddress && item.address
+                      ? `
+                  <p style="margin:5px 0 0;color:#5a7a2e;font-size:11px;line-height:17px;">
+                    &#128205; ${item.address.addressline || ""}${item.address.city ? ", " + item.address.city : ""}${item.address.pincode ? " - " + item.address.pincode : ""}
+                  </p>
+                  `
+                      : ""
+                  }
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td style="padding:14px 12px;color:#333;font-size:14px;text-align:center;vertical-align:middle;">&#8377;${item.price || 0}</td>
+          <td style="padding:14px 12px;color:#333;font-size:14px;text-align:center;vertical-align:middle;">${item.quantity || 1}</td>
+          <td style="padding:14px 18px;color:#1a2c52;font-size:14px;font-weight:700;text-align:right;vertical-align:middle;">&#8377;${item.total || 0}</td>
+        </tr>
         `,
+          )
+          .join("")}
+      </table>
+    </td>
+  </tr>
+
+  <!-- ORDER TOTALS -->
+  <tr>
+    <td style="padding:0 32px 24px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #dde3ec;border-radius:0 0 7px 7px;border-top:none;overflow:hidden;">
+        <tr>
+          <td style="padding:12px 18px;">
+            <table width="100%" cellpadding="6" cellspacing="0">
+              <tr>
+                <td style="color:#555;font-size:14px;">Subtotal</td>
+                <td align="right" style="color:#333;font-size:14px;">&#8377;${ordersData?.subtotal || 0}</td>
+              </tr>
+              <tr>
+                <td style="color:#555;font-size:14px;">Delivery Charges</td>
+                <td align="right" style="color:#333;font-size:14px;">&#8377;${ordersData?.deliveryCharge || 0}</td>
+              </tr>
+              <tr>
+                <td style="color:#555;font-size:14px;">Tax</td>
+                <td align="right" style="color:#333;font-size:14px;">&#8377;${ordersData?.tax || 0}</td>
+              </tr>
+              <tr>
+                <td colspan="2" style="padding:4px 0;">
+                  <hr style="border:none;border-top:2px dashed #dde3ec;margin:6px 0;"/>
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#1a2c52;font-size:16px;font-weight:700;">Grand Total</td>
+                <td align="right" style="color:${accent};font-size:18px;font-weight:800;">&#8377;${ordersData?.grandTotal || 0}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="padding:0 32px 30px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:${accentLight};border-radius:7px;">
+        <tr>
+          <td style="padding:16px 20px;">
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding-right:14px;vertical-align:top;font-size:22px;color:${accent};">&#127911;</td>
+                <td>
+                  <p style="margin:0;color:#444;font-size:13px;">If you have any questions, feel free to contact our support team.</p>
+                  <p style="margin:5px 0 0;color:#1a2c52;font-size:13px;font-weight:700;">Thank you for choosing healthy living!</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`,
   };
 };
 
-const sendEmail = async (to, subject, text) => {
+export const monthlyProductsOrders = (ordersData) => {
+  // Accent = blue (image style)
+  const accent = "#2a5298";
+  const accentLight = "#eef3fb";
+
+  return {
+    subject: "Monthly Order Confirmed",
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Monthly Order Confirmation</title>
+</head>
+<body style="margin:0;padding:0;background:#f0f2f5;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f2f5;padding:32px 0;">
+<tr><td align="center">
+<table width="640" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.09);">
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background:#1a2c52;padding:28px 40px;text-align:center;">
+      <table cellpadding="0" cellspacing="0" style="margin:0 auto 14px;">
+        <tr>
+          <td style="width:54px;height:54px;border-radius:50%;background:#ffffff;text-align:center;vertical-align:middle;">
+            <span style="font-size:26px;color:#1a2c52;font-weight:900;line-height:54px;">&#10003;</span>
+          </td>
+        </tr>
+      </table>
+      <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700;">Monthly Subscription Confirmed!</h1>
+      <p style="color:#b0bedc;margin:8px 0 0;font-size:14px;">Your recurring delivery plan is all set and activated.</p>
+    </td>
+  </tr>
+
+  <!-- ORDER NUMBER BAR -->
+  <tr>
+    <td style="padding:20px 32px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #dde3ec;border-radius:7px;">
+        <tr>
+          <td style="padding:16px 20px;border-right:1px solid #dde3ec;" width="50%">
+            <p style="margin:0;color:#888;font-size:12px;">Order Number</p>
+            <p style="margin:5px 0 0;color:#1a2c52;font-size:17px;font-weight:700;">#${ordersData?.orderId || ""}</p>
+          </td>
+          <td style="padding:16px 20px;" width="50%">
+            <p style="margin:0;color:#888;font-size:12px;">Order Date</p>
+            <p style="margin:5px 0 0;color:#1a2c52;font-size:16px;font-weight:700;">${ordersData?.orderDate || ""}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- CUSTOMER + ADDRESS -->
+  <tr>
+    <td style="padding:0 32px 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #dde3ec;border-radius:7px;overflow:hidden;">
+        <tr>
+          <td width="50%" valign="top" style="padding:18px 20px;border-right:1px solid #dde3ec;">
+            <p style="margin:0 0 12px;color:${accent};font-size:14px;font-weight:700;">
+              <span style="margin-right:6px;">&#128100;</span> Customer Details
+            </p>
+            <table cellpadding="4" cellspacing="0">
+              <tr>
+                <td style="color:#555;font-size:13px;white-space:nowrap;">Name</td>
+                <td style="color:#555;font-size:13px;padding:0 6px;">:</td>
+                <td style="color:#222;font-size:13px;">${ordersData?.customerName || ""}</td>
+              </tr>
+              <tr>
+                <td style="color:#555;font-size:13px;white-space:nowrap;">Email</td>
+                <td style="color:#555;font-size:13px;padding:0 6px;">:</td>
+                <td style="color:#222;font-size:13px;">${ordersData?.customerEmail || ""}</td>
+              </tr>
+              <tr>
+                <td style="color:#555;font-size:13px;white-space:nowrap;">Phone</td>
+                <td style="color:#555;font-size:13px;padding:0 6px;">:</td>
+                <td style="color:#222;font-size:13px;">${ordersData?.customerPhone || ""}</td>
+              </tr>
+            </table>
+          </td>
+          <td width="50%" valign="top" style="padding:18px 20px;">
+            <p style="margin:0 0 12px;color:${accent};font-size:14px;font-weight:700;">
+              <span style="margin-right:6px;">&#128205;</span> Delivery Address
+            </p>
+            <p style="margin:0;color:#333;font-size:13px;line-height:22px;">
+              ${ordersData?.addressLine1 || ""}<br/>
+              ${ordersData?.addressLine2 ? ordersData.addressLine2 + "<br/>" : ""}
+              ${ordersData?.city || ""} - ${ordersData?.pincode || ""}<br/>
+              ${ordersData?.state || ""}, ${ordersData?.country || ""}
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- MONTHLY ITEMS -->
+  <tr>
+    <td style="padding:0 32px 6px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #dde3ec;border-radius:7px;overflow:hidden;">
+        <!-- HEADING -->
+        <tr>
+          <td colspan="4" style="padding:14px 18px;border-bottom:1px solid #dde3ec;">
+            <p style="margin:0;color:${accent};font-size:14px;font-weight:700;">&#128230; Monthly Subscription Items</p>
+          </td>
+        </tr>
+        <!-- TABLE HEADER -->
+        <tr style="background:#f8f9fb;">
+          <td style="padding:10px 18px;color:#555;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eaecf0;" width="40%">Product</td>
+          <td style="padding:10px 10px;color:#555;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eaecf0;text-align:center;" width="22%">Consumption</td>
+          <td style="padding:10px 10px;color:#555;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eaecf0;text-align:center;" width="18%">Qty (kg)</td>
+          <td style="padding:10px 18px;color:#555;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eaecf0;text-align:right;" width="20%">Total</td>
+        </tr>
+
+        <!-- PRODUCT ROWS -->
+        ${(ordersData?.items || [])
+          .map(
+            (item) => `
+        <tr style="border-bottom:1px solid #f0f2f5;">
+          <td style="padding:14px 18px;vertical-align:middle;">
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding-right:12px;vertical-align:middle;">
+                  <img src="${item.productImage && item.productImage.includes("http") ? item.productImage : "http://localhost:3000" + (item.productImage || "")}"
+                    width="54" height="54" style="border-radius:6px;object-fit:cover;display:block;border:1px solid #e0e0e0;" alt="${item.productName || ""}"/>
+                </td>
+                <td style="vertical-align:middle;">
+                  <p style="margin:0;color:#1a2c52;font-size:14px;font-weight:600;">${item.productName || ""}</p>
+                  <p style="margin:4px 0 0;color:#888;font-size:12px;">&#8377;${item.price || 0} / kg</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td style="padding:14px 10px;text-align:center;vertical-align:middle;">
+            <table cellpadding="2" cellspacing="0" style="margin:0 auto;">
+              <tr><td style="color:#333;font-size:12px;white-space:nowrap;">${item.gramsperday}g / day</td></tr>
+              <tr><td style="color:#333;font-size:12px;white-space:nowrap;">${item.dayspermonth} days</td></tr>
+              <tr><td style="color:#333;font-size:12px;white-space:nowrap;">${item.familymembers} persons</td></tr>
+            </table>
+          </td>
+          <td style="padding:14px 10px;color:#333;font-size:14px;text-align:center;vertical-align:middle;">${item.quantity || ""}</td>
+          <td style="padding:14px 18px;color:#1a2c52;font-size:14px;font-weight:700;text-align:right;vertical-align:middle;">&#8377;${item.total || 0}</td>
+        </tr>
+        `,
+          )
+          .join("")}
+      </table>
+    </td>
+  </tr>
+
+  <!-- ORDER TOTALS -->
+  <tr>
+    <td style="padding:0 32px 24px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #dde3ec;border-radius:0 0 7px 7px;border-top:none;overflow:hidden;">
+        <tr>
+          <td style="padding:12px 18px;">
+            <table width="100%" cellpadding="6" cellspacing="0">
+              <tr>
+                <td style="color:#555;font-size:14px;">Subtotal</td>
+                <td align="right" style="color:#333;font-size:14px;">&#8377;${ordersData?.subtotal || 0}</td>
+              </tr>
+              <tr>
+                <td style="color:#555;font-size:14px;">Delivery Charges</td>
+                <td align="right" style="color:#333;font-size:14px;">&#8377;${ordersData?.deliveryCharge || 0}</td>
+              </tr>
+              <tr>
+                <td style="color:#555;font-size:14px;">Tax</td>
+                <td align="right" style="color:#333;font-size:14px;">&#8377;${ordersData?.tax || 0}</td>
+              </tr>
+              <tr>
+                <td colspan="2" style="padding:4px 0;">
+                  <hr style="border:none;border-top:2px dashed #dde3ec;margin:6px 0;"/>
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#1a2c52;font-size:16px;font-weight:700;">Grand Total</td>
+                <td align="right" style="color:${accent};font-size:18px;font-weight:800;">&#8377;${ordersData?.grandTotal || 0}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="padding:0 32px 30px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:${accentLight};border-radius:7px;">
+        <tr>
+          <td style="padding:16px 20px;">
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding-right:14px;vertical-align:top;font-size:22px;color:${accent};">&#127911;</td>
+                <td>
+                  <p style="margin:0;color:#444;font-size:13px;">If you have any questions, feel free to contact our support team.</p>
+                  <p style="margin:5px 0 0;color:#1a2c52;font-size:13px;font-weight:700;">Thank you for choosing healthy living!</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`,
+  };
+};
+
+export const sendEmail = async (to, subject, text, htmlContent) => {
   const mailOptions = {
-    from: `"Test Service" <${process.env.SMTP_MAIL}>`,
-    to,
+    from: `"Tradizions" <${process.env.SMTP_MAIL}>`,
+    to: to,
     subject,
     text,
     replyTo: process.env.SMTP_MAIL,
-    html:normalProductsOrder({})
+    html: htmlContent || normalProductsOrder({}).html,
   };
 
   const info = await transporter.sendMail(mailOptions);
-
   console.log("Message sent:", info.messageId);
-
   return info;
 };
 
 export const handleSendEmail = async (req, res) => {
   const { to, subject, text } = req.body;
-
-  console.log(req.body);
 
   if (!to || !subject || !text) {
     return res.status(400).json({
@@ -356,7 +481,6 @@ export const handleSendEmail = async (req, res) => {
     });
   } catch (error) {
     console.error("Controller Error:", error);
-
     res.status(500).json({
       success: false,
       error: error.message,

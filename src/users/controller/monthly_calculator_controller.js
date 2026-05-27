@@ -8,6 +8,7 @@ import { sequelize } from "../../../connection.js";
 import { AddressModel } from "../../model/address_model.js";
 import { OrderItemModel, OrderModel } from "../../model/order_model.js";
 import { MonthlyCalculatorModel } from "../../model/monthly_calculator_model.js";
+import { sendEmail, monthlyProductsOrders } from "../../admin/controller/mailController.js";
 
 export const getCalculatedProducts = asyncHandler(async (req, res) => {
   try {
@@ -197,6 +198,7 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
 
     let totalamount = 0;
     const orderItemsData = [];
+    const mailItems = [];
 
     /// ------- CALCULATE TOTAL AND PREPARE ITEMS -------
     for (const item of cartItems) {
@@ -227,6 +229,17 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
         quantity: parseFloat(totalQuantityKg.toFixed(2)),
         price: activePrice,
         totalprice: totalBudget,
+      });
+
+      mailItems.push({
+        productName: product.productname,
+        productImage: product.productimage,
+        quantity: parseFloat(totalQuantityKg.toFixed(2)) + " kg",
+        price: activePrice,
+        total: totalBudget,
+        gramsperday,
+        dayspermonth,
+        familymembers
       });
     }
 
@@ -292,6 +305,44 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
     });
 
     await transaction.commit();
+
+    try {
+      const mailAddress = await AddressModel.findOne({
+        where: { addressid, userid }
+      });
+
+      if (mailAddress) {
+        const targetEmail = mailAddress.email || "dinesh@vidyutinfo.in";
+        const orderData = {
+          customerName: mailAddress.fullname || "Customer",
+          customerEmail: targetEmail,
+          customerPhone: mailAddress.mobilenumber || "",
+          orderId: order.orderid,
+          orderDate: new Date().toLocaleDateString(),
+          addressLine1: mailAddress.addressline || "",
+          addressLine2: mailAddress.landmark || "",
+          city: mailAddress.city || "",
+          pincode: mailAddress.pincode || "",
+          state: mailAddress.state || "",
+          country: mailAddress.country || "",
+          items: mailItems,
+          subtotal: totalamount,
+          deliveryCharge: 0,
+          tax: 0,
+          grandTotal: totalamount
+        };
+
+        const emailHtml = monthlyProductsOrders(orderData).html;
+        await sendEmail(
+          targetEmail,
+          `Monthly Order Confirmation - #${order.orderid}`,
+          `Your monthly order #${order.orderid} has been successfully placed.`,
+          emailHtml
+        );
+      }
+    } catch (mailError) {
+      console.error("Error sending order confirmation email:", mailError);
+    }
 
     return res.status(200).json(
       new ApiResponse(200, {

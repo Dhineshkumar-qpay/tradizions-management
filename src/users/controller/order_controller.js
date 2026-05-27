@@ -8,6 +8,7 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { AuthModel } from "../../model/auth_model.js";
+import { sendEmail, normalProductsOrder } from "../../admin/controller/mailController.js";
 
 export const placeOrder = asyncHandler(async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -136,6 +137,7 @@ export const placeOrder = asyncHandler(async (req, res) => {
       { transaction },
     );
 
+    const mailItems = [];
     /// ------- CREATE ORDER ITEMS AND UPDATE STOCK -------
     for (const item of cartItems) {
       const product = item.product;
@@ -151,6 +153,15 @@ export const placeOrder = asyncHandler(async (req, res) => {
       }
       const singleItemPrice = price + giftCardPrice;
       const totalItemPrice = singleItemPrice * item.quantity;
+
+      mailItems.push({
+        productName: product.productname,
+        productImage: product.productimage,
+        quantity: item.quantity,
+        price: singleItemPrice,
+        total: totalItemPrice,
+        addressid: null, // will be set after itemAddressId is resolved
+      });
 
       let itemAddressId = null;
 
@@ -173,6 +184,9 @@ export const placeOrder = asyncHandler(async (req, res) => {
 
         itemAddressId = productAddress.addressid;
       }
+
+      // store the resolved addressid on the corresponding mailItem
+      mailItems[mailItems.length - 1].addressid = itemAddressId;
 
       /// ------- CREATE ORDER ITEM -------
       await OrderItemModel.create(
@@ -207,6 +221,65 @@ export const placeOrder = asyncHandler(async (req, res) => {
     });
 
     await transaction.commit();
+
+    try {
+      // Collect all unique addressids used across items
+      const uniqueAddressIds = [...new Set(mailItems.map(i => i.addressid).filter(Boolean))];
+
+      // Fetch all address records in one query
+      const addressRecords = await AddressModel.findAll({
+        where: { addressid: uniqueAddressIds }
+      });
+      const addressMap = {};
+      for (const addr of addressRecords) {
+        addressMap[addr.addressid] = addr;
+      }
+
+      // Attach full address object to each mail item
+      const enrichedMailItems = mailItems.map(mi => ({
+        ...mi,
+        address: addressMap[mi.addressid] || null
+      }));
+
+      // Use same-address record for customer info, fallback to first found address
+      const primaryAddress = issameaddress
+        ? (await AddressModel.findOne({ where: { addressid, userid } }))
+        : (addressRecords[0] || null);
+
+      if (primaryAddress) {
+        const targetEmail = primaryAddress.email || "dinesh@vidyutinfo.in";
+        const orderData = {
+          customerName: primaryAddress.fullname || "Customer",
+          customerEmail: targetEmail,
+          customerPhone: primaryAddress.mobilenumber || "",
+          orderId: order.orderid,
+          orderDate: new Date().toLocaleDateString(),
+          issameaddress,
+          // shared address (only used when issameaddress = true)
+          addressLine1: primaryAddress.addressline || "",
+          addressLine2: primaryAddress.landmark || "",
+          city: primaryAddress.city || "",
+          pincode: primaryAddress.pincode || "",
+          state: primaryAddress.state || "",
+          country: primaryAddress.country || "",
+          items: enrichedMailItems,
+          subtotal: totalamount,
+          deliveryCharge: 0,
+          tax: 0,
+          grandTotal: totalamount
+        };
+
+        const emailHtml = normalProductsOrder(orderData).html;
+        await sendEmail(
+          targetEmail,
+          `Order Confirmation - #${order.orderid}`,
+          `Your order #${order.orderid} has been successfully placed.`,
+          emailHtml
+        );
+      }
+    } catch (mailError) {
+      console.error("Error sending order confirmation email:", mailError);
+    }
 
     return res.status(200).json(
       new ApiResponse(200, {
