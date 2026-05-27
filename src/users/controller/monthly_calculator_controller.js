@@ -305,6 +305,124 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
   }
 });
 
+export const getMonthlyOrders = asyncHandler(async (req, res) => {
+  try {
+    const userid = req.user?.userid;
+
+    const orders = await OrderModel.findAll({
+      where: { userid, ordertype: "monthly" },
+    });
+
+    const updatedOrders = orders.map((item) => {
+      return {
+        orderid: item.orderid,
+        userid: item.userid,
+        addressid: item.addressid,
+        totalamount: item.totalamount,
+        ordertype: item.ordertype,
+        orderstatus: item.orderstatus,
+        paymentstatus: item.paymentstatus,
+        paymentid: item.paymentid,
+        orderdate: item.createdAt
+          .toLocaleDateString("en-GB")
+          .replace(/\//g, "-"),
+      };
+    });
+
+    return res.status(200).json(new ApiResponse(200, updatedOrders));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getMonthlyOrderDetails = asyncHandler(async (req, res) => {
+  try {
+    const { orderid } = req.body;
+
+    if (!orderid) {
+      throw new ApiError(400, "Order ID is required");
+    }
+
+    const orderItems = await OrderItemModel.findAll({
+      where: { orderid },
+      include: [
+        {
+          model: ProductModel,
+          as: "product",
+          required: true,
+          attributes: ["productid", "productname", "productimage", "itemtype"],
+        },
+        {
+          model: AddressModel,
+          as: "address",
+          required: true,
+          attributes: [
+            "addressid",
+            "addressline",
+            "landmark",
+            "city",
+            "district",
+            "state",
+            "pincode",
+          ],
+        },
+      ],
+    });
+
+    const order = await OrderModel.findOne({
+      where: { orderid },
+      attributes: ["totalamount", "orderstatus", "paymentstatus"],
+    });
+    let updatedAddress = null;
+
+    const formattedItems = orderItems.map((item) => {
+      const product = item.product.dataValues;
+      const address = item.address.dataValues;
+
+      updatedAddress = `${address.addressline}, ${address.landmark}, ${address.city}, ${address.district}, ${address.state}, ${address.pincode}`;
+
+      const activePrice = parseFloat(
+        product.sellingprice || product.price || 0,
+      );
+
+      const qtyPerPersonKg = (item.gramsperday * item.dayspermonth) / 1000;
+
+      const totalQuantityKg = qtyPerPersonKg * item.familymembers;
+      const calcultedprice = Math.round(activePrice * totalQuantityKg);
+
+      return {
+        orderitemid: item.orderitemid,
+        orderid: item.orderid,
+        productid: product.productid,
+        productname: product.productname,
+        productimage: product.productimage,
+        itemtype: product.itemtype,
+        quantitypersonkg: parseFloat(qtyPerPersonKg.toFixed(2)),
+        totalquantitykg: parseFloat(totalQuantityKg.toFixed(2)),
+        price: item.price,
+        totalprice: item.totalprice,
+        gramsperday: item.gramsperday,
+        dayspermonth: item.dayspermonth,
+        familymembers: item.familymembers,
+      };
+    });
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        order: {
+          orderid: order.orderid,
+          totalamount: order.totalamount,
+          orderstatus: order.orderstatus,
+          paymentstatus: order.paymentstatus,
+          address: updatedAddress,
+        },
+        items: formattedItems,
+      }),
+    );
+  } catch (error) {
+    throw error;
+  }
+});
 
 export const updateMonthlyOrderStatus = asyncHandler(async (req, res) => {
   const { orderid, orderstatus } = req.body;

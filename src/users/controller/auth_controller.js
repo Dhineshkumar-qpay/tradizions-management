@@ -1,5 +1,4 @@
 import { AuthModel, NewsLetterModel } from "../../model/auth_model.js";
-import { sendOTPEmail } from "../../../config/mailer.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
@@ -166,7 +165,7 @@ export const addToNewsletter = asyncHandler(async (req, res) => {
     });
 
     if (existingEmail) {
-      throw new ApiError(409, "Email already subscribed");
+      throw new ApiError(400, "Email already subscribed");
     }
 
     await NewsLetterModel.create({

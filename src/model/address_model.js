@@ -20,7 +20,25 @@ AddressModel.init(
         key: "userid",
       },
     },
-
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    fullname: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    mobilenumber: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        isEmail: true,
+      },
+    },
     addressline: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -37,16 +55,8 @@ AddressModel.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    districtid: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
     state: {
       type: DataTypes.STRING,
-      allowNull: false,
-    },
-    stateid: {
-      type: DataTypes.INTEGER,
       allowNull: false,
     },
     country: {

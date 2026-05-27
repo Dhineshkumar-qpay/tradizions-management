@@ -214,24 +214,26 @@ export const placeOrder = asyncHandler(async (req, res) => {
         totalamount,
       }),
     );
+    
   } catch (error) {
     await transaction.rollback();
     throw error;
   }
 });
 
-export const getUserOrders = asyncHandler(async (req, res) => {
+export const getAllOrders = asyncHandler(async (req, res) => {
   try {
+    const { ordertype } = req.body;
     const orders = await OrderModel.findAll({
       where: {
         userid: req.user?.userid,
+        ordertype: ordertype,
       },
       attributes: {
         exclude: ["createdAt", "updatedAt"],
       },
       order: [["createdAt", "DESC"]],
     });
-
     const updatedOrders = await Promise.all(
       orders.map(async (order) => {
         const orderItems = await OrderItemModel.findAll({
