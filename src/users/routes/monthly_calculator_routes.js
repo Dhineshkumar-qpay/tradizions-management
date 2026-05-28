@@ -13,17 +13,17 @@ import {
 
 const router = express.Router();
 
-router.post("/calculator/products", verifyToken, getCalculatedProducts);
-router.post("/calculator/cart/add", verifyToken, addToMonthlyCart);
-router.post("/calculator/cart/get", verifyToken, getMonthlyCart);
+router.post("/monthly/products", verifyToken, getCalculatedProducts);
+router.post("/monthly/cart/add", verifyToken, addToMonthlyCart);
+router.post("/monthly/cart/get", verifyToken, getMonthlyCart);
 router.post(
-  "/calculator/place-order",
+  "/monthly/place-order",
   verifyToken,
   placeMonthlyOrder,
 );
-router.post("/calculator/orders", verifyToken, getMonthlyOrders);
-router.post("/calculator/order-detail", verifyToken, getMonthlyOrderDetails);
-router.post("/calculator/update-order-status", verifyToken, updateMonthlyOrderStatus);
-router.post("/calculator/merchant-orders", verifyToken, getMerchantMonthlyOrders);
+router.post("/monthly/orders", verifyToken, getMonthlyOrders);
+router.post("/monthly/order-detail", verifyToken, getMonthlyOrderDetails);
+router.post("/monthly/update-order-status", verifyToken, updateMonthlyOrderStatus);
+router.post("/monthly/merchant-orders", verifyToken, getMerchantMonthlyOrders);
 
 export default router;

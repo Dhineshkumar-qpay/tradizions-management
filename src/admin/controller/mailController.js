@@ -95,9 +95,8 @@ export const normalProductsOrder = (ordersData) => {
             <p style="margin:0 0 12px;color:${accent};font-size:14px;font-weight:700;">
               <span style="margin-right:6px;">&#128205;</span> Shipping Address
             </p>
-            ${
-              ordersData?.issameaddress !== false
-                ? `
+            ${ordersData?.issameaddress !== false
+        ? `
             <p style="margin:0;color:#333;font-size:13px;line-height:22px;">
               ${ordersData?.addressLine1 || ""}<br/>
               ${ordersData?.addressLine2 ? ordersData.addressLine2 + "<br/>" : ""}
@@ -105,8 +104,8 @@ export const normalProductsOrder = (ordersData) => {
               ${ordersData?.state || ""}, ${ordersData?.country || ""}
             </p>
             `
-                : `<p style="margin:0;color:#777;font-size:13px;font-style:italic;">See per-item address below</p>`
-            }
+        : `<p style="margin:0;color:#777;font-size:13px;font-style:italic;">See per-item address below</p>`
+      }
           </td>
         </tr>
       </table>
@@ -133,8 +132,8 @@ export const normalProductsOrder = (ordersData) => {
 
         <!-- PRODUCT ROWS -->
         ${(ordersData?.items || [])
-          .map(
-            (item, index) => `
+        .map(
+          (item, index) => `
         <tr style="border-bottom:1px solid #f0f2f5;">
           <td style="padding:14px 18px;vertical-align:middle;">
             <table cellpadding="0" cellspacing="0">
@@ -145,15 +144,14 @@ export const normalProductsOrder = (ordersData) => {
                 </td>
                 <td style="vertical-align:middle;">
                   <p style="margin:0;color:#1a2c52;font-size:14px;font-weight:600;">${item.productName || ""}</p>
-                  ${
-                    !ordersData?.issameaddress && item.address
-                      ? `
+                  ${!ordersData?.issameaddress && item.address
+              ? `
                   <p style="margin:5px 0 0;color:#5a7a2e;font-size:11px;line-height:17px;">
                     &#128205; ${item.address.addressline || ""}${item.address.city ? ", " + item.address.city : ""}${item.address.pincode ? " - " + item.address.pincode : ""}
                   </p>
                   `
-                      : ""
-                  }
+              : ""
+            }
                 </td>
               </tr>
             </table>
@@ -163,8 +161,8 @@ export const normalProductsOrder = (ordersData) => {
           <td style="padding:14px 18px;color:#1a2c52;font-size:14px;font-weight:700;text-align:right;vertical-align:middle;">&#8377;${item.total || 0}</td>
         </tr>
         `,
-          )
-          .join("")}
+        )
+        .join("")}
       </table>
     </td>
   </tr>
@@ -348,8 +346,8 @@ export const monthlyProductsOrders = (ordersData) => {
 
         <!-- PRODUCT ROWS -->
         ${(ordersData?.items || [])
-          .map(
-            (item) => `
+        .map(
+          (item) => `
         <tr style="border-bottom:1px solid #f0f2f5;">
           <td style="padding:14px 18px;vertical-align:middle;">
             <table cellpadding="0" cellspacing="0">
@@ -376,8 +374,8 @@ export const monthlyProductsOrders = (ordersData) => {
           <td style="padding:14px 18px;color:#1a2c52;font-size:14px;font-weight:700;text-align:right;vertical-align:middle;">&#8377;${item.total || 0}</td>
         </tr>
         `,
-          )
-          .join("")}
+        )
+        .join("")}
       </table>
     </td>
   </tr>
@@ -447,18 +445,24 @@ export const monthlyProductsOrders = (ordersData) => {
 };
 
 export const sendEmail = async (to, subject, text, htmlContent) => {
-  const mailOptions = {
-    from: `"Tradizions" <${process.env.SMTP_MAIL}>`,
-    to: to,
-    subject,
-    text,
-    replyTo: process.env.SMTP_MAIL,
-    html: htmlContent || normalProductsOrder({}).html,
-  };
+  try {
+    const senderMail = process.env.SMTP_MAIL || "dinesh@vidyutinfo.in";
+    const mailOptions = {
+      from: `"Tradizions" <${senderMail}>`,
+      to: to || senderMail,
+      subject: subject || "Notification from Tradizions",
+      text: text || "Notification",
+      replyTo: senderMail,
+      html: htmlContent ? htmlContent : normalProductsOrder({}).html,
+    };
 
-  const info = await transporter.sendMail(mailOptions);
-  console.log("Message sent:", info.messageId);
-  return info;
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Message sent:", info.messageId);
+    return info;
+  } catch (error) {
+    console.error("Error sending email in sendEmail function:", error);
+    return null;
+  }
 };
 
 export const handleSendEmail = async (req, res) => {

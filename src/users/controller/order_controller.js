@@ -8,7 +8,10 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { AuthModel } from "../../model/auth_model.js";
-import { sendEmail, normalProductsOrder } from "../../admin/controller/mailController.js";
+import {
+  sendEmail,
+  normalProductsOrder,
+} from "../../admin/controller/mailController.js";
 
 export const placeOrder = asyncHandler(async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -224,11 +227,13 @@ export const placeOrder = asyncHandler(async (req, res) => {
 
     try {
       // Collect all unique addressids used across items
-      const uniqueAddressIds = [...new Set(mailItems.map(i => i.addressid).filter(Boolean))];
+      const uniqueAddressIds = [
+        ...new Set(mailItems.map((i) => i.addressid).filter(Boolean)),
+      ];
 
       // Fetch all address records in one query
       const addressRecords = await AddressModel.findAll({
-        where: { addressid: uniqueAddressIds }
+        where: { addressid: uniqueAddressIds },
       });
       const addressMap = {};
       for (const addr of addressRecords) {
@@ -236,18 +241,18 @@ export const placeOrder = asyncHandler(async (req, res) => {
       }
 
       // Attach full address object to each mail item
-      const enrichedMailItems = mailItems.map(mi => ({
+      const enrichedMailItems = mailItems.map((mi) => ({
         ...mi,
-        address: addressMap[mi.addressid] || null
+        address: addressMap[mi.addressid] || null,
       }));
 
       // Use same-address record for customer info, fallback to first found address
       const primaryAddress = issameaddress
-        ? (await AddressModel.findOne({ where: { addressid, userid } }))
-        : (addressRecords[0] || null);
+        ? await AddressModel.findOne({ where: { addressid, userid } })
+        : addressRecords[0] || null;
 
       if (primaryAddress) {
-        const targetEmail = primaryAddress.email || "dinesh@vidyutinfo.in";
+        const targetEmail = "dinesh@vidyutinfo.in";
         const orderData = {
           customerName: primaryAddress.fullname || "Customer",
           customerEmail: targetEmail,
@@ -266,7 +271,7 @@ export const placeOrder = asyncHandler(async (req, res) => {
           subtotal: totalamount,
           deliveryCharge: 0,
           tax: 0,
-          grandTotal: totalamount
+          grandTotal: totalamount,
         };
 
         const emailHtml = normalProductsOrder(orderData).html;
@@ -274,7 +279,7 @@ export const placeOrder = asyncHandler(async (req, res) => {
           targetEmail,
           `Order Confirmation - #${order.orderid}`,
           `Your order #${order.orderid} has been successfully placed.`,
-          emailHtml
+          emailHtml,
         );
       }
     } catch (mailError) {
@@ -287,7 +292,6 @@ export const placeOrder = asyncHandler(async (req, res) => {
         totalamount,
       }),
     );
-    
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -398,6 +402,10 @@ export const orderDetails = asyncHandler(async (req, res) => {
           required: false,
           attributes: [
             "addressid",
+            "title",
+            "fullname",
+            "mobilenumber",
+            "email",
             "addressline",
             "landmark",
             "city",
@@ -550,9 +558,10 @@ export const getMerchantOrders = asyncHandler(async (req, res) => {
     const orders = await OrderModel.findAll({
       where: {
         bid: bid,
+        ordertype: "normal",
       },
       attributes: {
-        exclude: ["createdAt", "updatedAt"],
+        exclude: ["updatedAt"],
       },
       order: [["createdAt", "DESC"]],
     });
@@ -583,6 +592,9 @@ export const getMerchantOrders = asyncHandler(async (req, res) => {
 
         return {
           ...order.dataValues,
+          createdAt: order.createdAt
+            .toLocaleDateString("en-GB")
+            .replace(/\//g, "-"),
           items: items,
         };
       }),
@@ -630,11 +642,12 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
 
     return res
       .status(200)
-      .json(new ApiResponse(200, null, "Order Status Updated Successfully"));
+      .json(new ApiResponse(200, "Order Status Updated Successfully"));
   } catch (error) {
     throw error;
   }
 });
+
 export const updateOrderItemStatus = asyncHandler(async (req, res) => {
   try {
     const { orderitemid, itemstatus } = req.body;

@@ -42,15 +42,13 @@ OrderModel.init(
       type: DataTypes.ENUM("normal", "monthly"),
       defaultValue: "normal",
     },
-
     orderstatus: {
       type: DataTypes.ENUM(
         "pending",
         "confirmed",
-        "packed",
         "shipped",
-        "outfordelivery",
         "delivered",
+        "cancelled",
       ),
       allowNull: false,
       defaultValue: "pending",

@@ -8,7 +8,10 @@ import { sequelize } from "../../../connection.js";
 import { AddressModel } from "../../model/address_model.js";
 import { OrderItemModel, OrderModel } from "../../model/order_model.js";
 import { MonthlyCalculatorModel } from "../../model/monthly_calculator_model.js";
-import { sendEmail, monthlyProductsOrders } from "../../admin/controller/mailController.js";
+import {
+  sendEmail,
+  monthlyProductsOrders,
+} from "../../admin/controller/mailController.js";
 
 export const getCalculatedProducts = asyncHandler(async (req, res) => {
   try {
@@ -239,7 +242,7 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
         total: totalBudget,
         gramsperday,
         dayspermonth,
-        familymembers
+        familymembers,
       });
     }
 
@@ -308,11 +311,11 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
 
     try {
       const mailAddress = await AddressModel.findOne({
-        where: { addressid, userid }
+        where: { addressid, userid },
       });
 
       if (mailAddress) {
-        const targetEmail = mailAddress.email || "dinesh@vidyutinfo.in";
+        const targetEmail =  "dinesh@vidyutinfo.in";
         const orderData = {
           customerName: mailAddress.fullname || "Customer",
           customerEmail: targetEmail,
@@ -329,7 +332,7 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
           subtotal: totalamount,
           deliveryCharge: 0,
           tax: 0,
-          grandTotal: totalamount
+          grandTotal: totalamount,
         };
 
         const emailHtml = monthlyProductsOrders(orderData).html;
@@ -337,7 +340,7 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
           targetEmail,
           `Monthly Order Confirmation - #${order.orderid}`,
           `Your monthly order #${order.orderid} has been successfully placed.`,
-          emailHtml
+          emailHtml,
         );
       }
     } catch (mailError) {
@@ -409,6 +412,10 @@ export const getMonthlyOrderDetails = asyncHandler(async (req, res) => {
           required: true,
           attributes: [
             "addressid",
+            "title",
+            "fullname",
+            "mobilenumber",
+            "email",
             "addressline",
             "landmark",
             "city",
@@ -425,12 +432,17 @@ export const getMonthlyOrderDetails = asyncHandler(async (req, res) => {
       attributes: ["totalamount", "orderstatus", "paymentstatus"],
     });
     let updatedAddress = null;
+    let fullname = null;
+    let email = null;
+    let mobilenumber = null;
 
     const formattedItems = orderItems.map((item) => {
       const product = item.product.dataValues;
       const address = item.address.dataValues;
-
-      updatedAddress = `${address.addressline}, ${address.landmark}, ${address.city}, ${address.district}, ${address.state}, ${address.pincode}`;
+      fullname = address.fullname;
+      email = address.email;
+      mobilenumber = address.mobilenumber;
+      updatedAddress = `${address.title}, ${address.addressline}, ${address.landmark}, ${address.city}, ${address.district}, ${address.state}, ${address.pincode}`;
 
       const activePrice = parseFloat(
         product.sellingprice || product.price || 0,
@@ -461,10 +473,13 @@ export const getMonthlyOrderDetails = asyncHandler(async (req, res) => {
     return res.status(200).json(
       new ApiResponse(200, {
         order: {
-          orderid: order.orderid,
+          orderid: orderid,
           totalamount: order.totalamount,
           orderstatus: order.orderstatus,
           paymentstatus: order.paymentstatus,
+          fullname: fullname,
+          email: email,
+          mobilenumber: mobilenumber,
           address: updatedAddress,
         },
         items: formattedItems,
@@ -509,14 +524,25 @@ export const updateMonthlyOrderStatus = asyncHandler(async (req, res) => {
 
 export const getMerchantMonthlyOrders = asyncHandler(async (req, res) => {
   try {
-    const { bid } = req.body;
+    const { bid, orderstatus, paymentstatus } = req.body;
 
     if (!bid) {
       throw new ApiError(400, "Business id is required");
     }
+    let where = {
+      bid: bid,
+      ordertype: "monthly",
+    };
+    if (orderstatus) {
+      where.orderstatus = orderstatus;
+    }
+    if (paymentstatus) {
+      where.paymentstatus = paymentstatus;
+    }
+    
 
     const orders = await OrderModel.findAll({
-      where: { bid, ordertype: "monthly" },
+      where,
     });
 
     const updatedOrders = orders.map((item) => {
