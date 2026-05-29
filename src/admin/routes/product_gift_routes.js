@@ -1,5 +1,5 @@
 import express from "express";
-import { verifyToken } from "../../middleware/auth_middleware.js";
+import { adminOnly, verifyToken } from "../../middleware/auth_middleware.js";
 import {
   addOrUpdateProductImages,
   addProduct,
@@ -21,6 +21,9 @@ import {
   getGiftCards,
   deleteGiftCard,
   getCorporateGiftProducts,
+  addHealthGoal,
+  deleteGoal,
+  getAllHealthGoals,
 } from "../controller/product_gift_controller.js";
 import { upload } from "../../middleware/multer_middleware.js";
 
@@ -79,5 +82,16 @@ router.post("/product/add-update-rating", verifyToken, addProductRating);
 router.post("/product/delete-rating", verifyToken, deleteRating);
 router.post("/product/rating-status", verifyToken, ratingStatusUpdate);
 router.post("/product/all-ratings", verifyToken, getAllProductRatings);
+
+router.post(
+  "/goal/addhealth-goal",
+  verifyToken,
+  adminOnly,
+  upload.single("goalimage"),
+  addHealthGoal,
+);
+
+router.post("/goal/delete-goal", verifyToken, adminOnly, deleteGoal);
+router.post("/goal/gethealth-goals", verifyToken, getAllHealthGoals);
 
 export default router;

@@ -1,4 +1,4 @@
-import { Op, or } from "sequelize";
+import { Op, or, where } from "sequelize";
 import { sequelize } from "../../../connection.js";
 import { AddressModel } from "../../model/address_model.js";
 import { CartModel } from "../../model/cart_model.js";
@@ -12,6 +12,7 @@ import {
   sendEmail,
   normalProductsOrder,
 } from "../../admin/controller/mailController.js";
+import { last1Month, last6Months, last7Days } from "../../utils/date_utile.js";
 
 export const placeOrder = asyncHandler(async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -549,20 +550,52 @@ export const getAlluserOrders = asyncHandler(async (req, res) => {
 
 export const getMerchantOrders = asyncHandler(async (req, res) => {
   try {
-    const { bid } = req.body;
+    const { bid, orderstatus, paymentstatus, date } = req.body;
 
     if (!bid) {
       throw new ApiError(400, "Business id is required");
     }
 
+    if (!bid) {
+      throw new ApiError(400, "Business id is required");
+    }
+    let where = {
+      bid: bid,
+      ordertype: "normal",
+    };
+    if (orderstatus && orderstatus !== "all") {
+      where.orderstatus = orderstatus;
+    }
+    if (paymentstatus && paymentstatus !== "all") {
+      where.paymentstatus = paymentstatus;
+    }
+
+    if (date && date !== "all") {
+      switch (date) {
+        case "last7days":
+          where.createdAt = {
+            [Op.between]: [last7Days.from, last7Days.to],
+          };
+          break;
+
+        case "last1month":
+          where.createdAt = {
+            [Op.between]: [last1Month.from, last1Month.to],
+          };
+          break;
+
+        case "last6months":
+          where.createdAt = {
+            [Op.between]: [last6Months.from, last6Months.to],
+          };
+          break;
+        default:
+          break;
+      }
+    }
+
     const orders = await OrderModel.findAll({
-      where: {
-        bid: bid,
-        ordertype: "normal",
-      },
-      attributes: {
-        exclude: ["updatedAt"],
-      },
+      where,
       order: [["createdAt", "DESC"]],
     });
 
@@ -676,148 +709,81 @@ export const updateOrderItemStatus = asyncHandler(async (req, res) => {
 });
 
 export const getAdminOrdersList = asyncHandler(async (req, res) => {
-  try {
-    const { bid, fromdate, todate } = req.body;
+  const { bid, date } = req.body;
 
-    if (!bid) {
-      throw new ApiError(400, "Business id is required");
+  if (!bid) {
+    throw new ApiError(400, "Business id is required");
+  }
+
+  // Dynamic where condition
+  const where = {
+    bid,
+  };
+
+  // Date filter
+  if (date && date !== "all") {
+    switch (date) {
+      case "last7days":
+        where.createdAt = {
+          [Op.between]: [last7Days.from, last7Days.to],
+        };
+        break;
+
+      case "last1month":
+        where.createdAt = {
+          [Op.between]: [last1Month.from, last1Month.to],
+        };
+        break;
+
+      case "last6months":
+        where.createdAt = {
+          [Op.between]: [last6Months.from, last6Months.to],
+        };
+        break;
+
+      default:
+        break;
     }
+  }
 
-    const currentDate = new Date();
-
-    const startOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1,
-      0,
-      0,
-      0,
-      0,
-    );
-
-    const endOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999,
-    );
-
-    const startDate = fromdate
-      ? new Date(`${fromdate}T00:00:00.000Z`)
-      : startOfMonth;
-
-    const endDate = todate ? new Date(`${todate}T23:59:59.999Z`) : endOfMonth;
-
-    const ordersItems = await OrderItemModel.findAll({
-      where: {
-        bid,
-        createdAt: {
-          [Op.between]: [startDate, endDate],
-        },
-      },
-
-      include: [
-        {
-          model: OrderModel,
-          as: "order",
-          attributes: ["orderid", "userid", "totalamount", "orderstatus"],
-        },
-
-        {
-          model: ProductModel,
-          as: "product",
-          attributes: ["productid", "productname", "productimage", "itemtype"],
-        },
-
-        {
-          model: AddressModel,
-          as: "address",
-          attributes: [
-            "addressid",
-            "addressline",
-            "landmark",
-            "city",
-            "district",
-            "state",
-            "pincode",
-          ],
-        },
-
-        {
-          model: AuthModel,
-          as: "user",
-          attributes: ["username", "email", "phone"],
-        },
-      ],
-
+ const orders = await OrderModel.findAll({
+      where,
       order: [["createdAt", "DESC"]],
     });
 
-    const updatedOrderItems = await Promise.all(
-      ordersItems.map(async (item) => {
-        let giftDetails = {};
-
-        const order = item.order?.dataValues || {};
-        const product = item.product?.dataValues || {};
-        const address = item.address?.dataValues || {};
-        const user = item.user?.dataValues || {};
-
-        const [year, month, day] = item.createdAt
-          .toISOString()
-          .split("T")[0]
-          .split("-");
-
-        const formatedDate = `${day}-${month}-${year}`;
-
-        if (item.giftcardid) {
-          giftDetails = await GiftcardModel.findOne({
-            where: {
-              giftcardid: item.giftcardid,
+    const updatedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const orderItems = await OrderItemModel.findAll({
+          where: {
+            orderid: order.orderid,
+          },
+          include: [
+            {
+              model: ProductModel,
+              as: "product",
+              attributes: ["productid", "productname", "productimage"],
             },
-          });
-        }
+            {
+              model: GiftcardModel,
+              as: "giftcard",
+              attributes: ["giftcardid", "cardname", "cardimage"],
+            },
+          ],
+        });
+
+        const items = orderItems.map((item) => ({
+          ...item.product.dataValues,
+        }));
 
         return {
-          orderid: order.orderid || 0,
-          orderitemid: item.orderitemid,
-          userid: order.userid || 0,
-          orderstatus: order.orderstatus || "",
-          username: user.username || "",
-          email: user.email || "",
-          phone: user.phone || "",
-          itemtype: product.itemtype || "",
-          productname: product.productname || "",
-          productimage: product.productimage || "",
-          quantity: item.quantity,
-          price: item.price,
-          addressid: address.addressid || 0,
-          addressline: address.addressline || "",
-          landmark: address.landmark || "",
-          city: address.city || "",
-          district: address.district || "",
-          state: address.state || "",
-          pincode: address.pincode || "",
-          totalprice: item.totalprice,
-          itemstatus: item.itemstatus,
-          ordertype: item.ordertype || "normal",
-          gramsperday: item.gramsperday || null,
-          dayspermonth: item.dayspermonth || null,
-          familymembers: item.familymembers || null,
-          giftcardid: giftDetails?.giftcardid || 0,
-          giftcardname: giftDetails?.cardname || "",
-          giftcardimage: giftDetails?.cardimage || null,
-          giftcardprice: giftDetails?.cardprice || null,
-          giftmessage: item.giftmessage || null,
-          orderdate: formatedDate,
+          ...order.dataValues,
+          createdAt: order.createdAt
+            .toLocaleDateString("en-GB")
+            .replace(/\//g, "-"),
+          items: items,
         };
       }),
     );
 
-    return res.status(200).json(new ApiResponse(200, updatedOrderItems));
-  } catch (error) {
-    throw error;
-  }
+    return res.status(200).json(new ApiResponse(200, updatedOrders));
 });

@@ -12,6 +12,8 @@ import {
   sendEmail,
   monthlyProductsOrders,
 } from "../../admin/controller/mailController.js";
+import { last1Month, last6Months, last7Days } from "../../utils/date_utile.js";
+import { Op } from "sequelize";
 
 export const getCalculatedProducts = asyncHandler(async (req, res) => {
   try {
@@ -315,7 +317,7 @@ export const placeMonthlyOrder = asyncHandler(async (req, res) => {
       });
 
       if (mailAddress) {
-        const targetEmail =  "dinesh@vidyutinfo.in";
+        const targetEmail = "dinesh@vidyutinfo.in";
         const orderData = {
           customerName: mailAddress.fullname || "Customer",
           customerEmail: targetEmail,
@@ -524,7 +526,7 @@ export const updateMonthlyOrderStatus = asyncHandler(async (req, res) => {
 
 export const getMerchantMonthlyOrders = asyncHandler(async (req, res) => {
   try {
-    const { bid, orderstatus, paymentstatus } = req.body;
+    const { bid, orderstatus, paymentstatus, date } = req.body;
 
     if (!bid) {
       throw new ApiError(400, "Business id is required");
@@ -533,16 +535,40 @@ export const getMerchantMonthlyOrders = asyncHandler(async (req, res) => {
       bid: bid,
       ordertype: "monthly",
     };
-    if (orderstatus) {
+    if (orderstatus && orderstatus !== "all") {
       where.orderstatus = orderstatus;
     }
-    if (paymentstatus) {
+    if (paymentstatus && paymentstatus !== "all") {
       where.paymentstatus = paymentstatus;
     }
-    
+
+    if (date && date !== "all") {
+      switch (date) {
+        case "last7days":
+          where.createdAt = {
+            [Op.between]: [last7Days.from, last7Days.to],
+          };
+          break;
+
+        case "last1month":
+          where.createdAt = {
+            [Op.between]: [last1Month.from, last1Month.to],
+          };
+          break;
+
+        case "last6months":
+          where.createdAt = {
+            [Op.between]: [last6Months.from, last6Months.to],
+          };
+          break;
+        default:
+          break;
+      }
+    }
 
     const orders = await OrderModel.findAll({
       where,
+      order: [["createdAt", "DESC"]],
     });
 
     const updatedOrders = orders.map((item) => {

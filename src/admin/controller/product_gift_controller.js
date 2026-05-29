@@ -4,6 +4,8 @@ import {
   ProductImagesModel,
   ProductReviewModel,
   GiftcardModel,
+  HealthGoalsModel,
+  ProductHealthGoal,
 } from "../../model/product_gift_model.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
@@ -78,6 +80,7 @@ export const addProduct = asyncHandler(async (req, res) => {
     fibre,
     fat,
     carbohydrates,
+    healthgoalids,
     country,
   } = req.body;
 
@@ -151,6 +154,20 @@ export const addProduct = asyncHandler(async (req, res) => {
             : existingProduct.carbohydrates,
         country: country || "India",
       });
+
+      if (
+        healthgoalids &&
+        healthgoalids.length > 0 &&
+        Array.isArray(healthgoalids)
+      ) {
+        const goalData = healthgoalids.map((goalid) => {
+          return {
+            product: product.productid,
+            goalid: goalid,
+          };
+        });
+        await ProductHealthGoal.bulkCreate(goalData);
+      }
 
       return res.status(200).json(
         new ApiResponse(200, {
@@ -229,6 +246,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
       fibre,
       fat,
       carbohydrates,
+      healthgoalids,
       country,
     } = req.body;
 
@@ -287,6 +305,20 @@ export const updateProduct = asyncHandler(async (req, res) => {
           : existingProduct.carbohydrates,
       country: country !== undefined ? country : existingProduct.country,
     });
+
+    if (
+      healthgoalids &&
+      healthgoalids.length > 0 &&
+      Array.isArray(healthgoalids)
+    ) {
+      const goalData = healthgoalids.map((goalid) => {
+        return {
+          product: existingProduct.productid,
+          goalid: goalid,
+        };
+      });
+      await ProductHealthGoal.bulkCreate(goalData);
+    }
 
     return res.status(200).json(
       new ApiResponse(200, {
@@ -733,7 +765,7 @@ export const getCorporateGiftProducts = asyncHandler(async (req, res) => {
   try {
     const products = await ProductModel.findAll({
       where: {
-        itemtype:"gift",
+        itemtype: "gift",
         gifttype: "nuts",
       },
       limit: 10,
@@ -948,6 +980,60 @@ export const getAllProductRatings = asyncHandler(async (req, res) => {
     });
 
     return res.status(200).json(new ApiResponse(200, ratings));
+  } catch (error) {
+    throw error;
+  }
+});
+
+///----------------------- Health Goals  ---------------------------///
+
+export const addHealthGoal = asyncHandler(async (req, res) => {
+  try {
+    const { goalname, description } = req.body;
+    if (!goalname) {
+      throw new ApiError(400, "Healthgoal Name required");
+    }
+
+    if (req.file && req.file.path) {
+      var goalimage = `/${req.file.path.replace(/\\/g, "/")}`;
+    }
+
+    const healthgoal = await HealthGoalsModel.create({
+      goalname: goalname,
+      description: description,
+      goalimage: goalimage,
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Health goal added successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const deleteGoal = asyncHandler(async (req, res) => {
+  try {
+    const { goalid } = req.body;
+
+    const goal = await HealthGoalsModel.destroy({
+      where: {
+        goalid: goalid,
+      },
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Health goal deleted successfully"));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getAllHealthGoals = asyncHandler(async (req, res) => {
+  try {
+    const goals = await HealthGoalsModel.findAll();
+    return res.status(200).json(new ApiResponse(200, goals));
   } catch (error) {
     throw error;
   }

@@ -16,6 +16,7 @@ import {
   getKyc,
   getTotalBusiness,
   updateKyc,
+  updateBank,
 } from "../controller/business_controllers.js";
 import { adminOnly, verifyToken } from "../../middleware/auth_middleware.js";
 import { upload } from "../../middleware/multer_middleware.js";
@@ -76,6 +77,13 @@ router.post(
   verifyToken,
   upload.single("passbook"),
   addBank,
+);
+
+router.post(
+  "/business/updatebankinfo",
+  verifyToken,
+  upload.single("passbook"),
+  updateBank,
 );
 
 router.post("/business/getbankinfo", verifyToken, getBankInfo);

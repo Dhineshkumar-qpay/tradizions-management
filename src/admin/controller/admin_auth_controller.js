@@ -1,5 +1,6 @@
 import { current } from "../../../config/config.js";
 import { AuthModel } from "../../model/auth_model.js";
+import { OrderModel } from "../../model/order_model.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
@@ -114,7 +115,22 @@ export const getAllUsers = asyncHandler(async (req, res) => {
         "createdAt",
       ],
     });
-    return res.status(200).json(new ApiResponse(200, users));
+
+    const updatedUsers = await Promise.all(
+      users.map(async (item) => {
+        const orderCount = await OrderModel.count({
+          where: {
+            userid: item.userid,
+          },
+        });
+
+        return {
+          ...item.dataValues,
+          ordercount: orderCount,
+        };
+      }),
+    );
+    return res.status(200).json(new ApiResponse(200, updatedUsers));
   } catch (error) {
     throw error;
   }

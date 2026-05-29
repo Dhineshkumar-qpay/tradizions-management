@@ -310,7 +310,78 @@ ProductReviewModel.init(
   },
 );
 
-export { ProductModel, ProductImagesModel, ProductReviewModel, GiftcardModel };
+class HealthGoalsModel extends Model {}
+
+HealthGoalsModel.init(
+  {
+    goalid: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    goalimage: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    goalname: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    description: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+  },
+  {
+    sequelize: sequelize,
+    tableName: "healthgoals",
+    modelName: "HealthGoalsModel",
+    timestamps: false,
+  },
+);
+
+class ProductHealthGoal extends Model {}
+
+ProductHealthGoal.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    productid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: ProductModel,
+        key: "productid",
+      },
+    },
+    goalid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: HealthGoalsModel,
+        key: "goalid",
+      },
+    },
+  },
+  {
+    sequelize: sequelize,
+    tableName: "producthealthgoals",
+    modelName: "ProductHealthGoal",
+    timestamps: false,
+  },
+);
+
+export {
+  ProductModel,
+  ProductImagesModel,
+  ProductReviewModel,
+  GiftcardModel,
+  HealthGoalsModel,
+  ProductHealthGoal,
+};
 
 ProductModel.hasMany(ProductImagesModel, {
   foreignKey: "productid",
@@ -328,4 +399,16 @@ ProductModel.hasMany(ProductReviewModel, {
 
 ProductReviewModel.belongsTo(ProductModel, {
   foreignKey: "productid",
+});
+
+HealthGoalsModel.belongsToMany(ProductModel, {
+  through: "product_healthgoals",
+  foreignKey: "goalid",
+  otherKey: "productid",
+});
+
+ProductModel.belongsToMany(HealthGoalsModel, {
+  through: "product_healthgoals",
+  foreignKey: "productid",
+  otherKey: "goalid",
 });
