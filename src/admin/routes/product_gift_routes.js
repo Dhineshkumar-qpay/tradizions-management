@@ -24,6 +24,7 @@ import {
   addHealthGoal,
   deleteGoal,
   getAllHealthGoals,
+  getHealthGoalProducts,
 } from "../controller/product_gift_controller.js";
 import { upload } from "../../middleware/multer_middleware.js";
 
@@ -93,5 +94,6 @@ router.post(
 
 router.post("/goal/delete-goal", verifyToken, adminOnly, deleteGoal);
 router.post("/goal/gethealth-goals", verifyToken, getAllHealthGoals);
+router.post("/product/health-goal-products", verifyToken, getHealthGoalProducts);
 
 export default router;

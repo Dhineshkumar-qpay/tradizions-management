@@ -167,6 +167,7 @@ export const getProductDetail = asyncHandler(async (req, res) => {
 
   const updatedProductDetail = {
     ...productDetail.toJSON(),
+    healthgoalids: JSON.parse(productDetail.healthgoalids),
     image1: productImages?.image1 ?? null,
     image2: productImages?.image2 ?? null,
     image3: productImages?.image3 ?? null,
@@ -306,7 +307,6 @@ export const getFeaturedProducts = asyncHandler(async (req, res) => {
       ];
     }
 
-    
     let order = [["createdAt", "DESC"]];
 
     if (sortBy === "lowToHigh") {

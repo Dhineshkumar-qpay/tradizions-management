@@ -64,6 +64,10 @@ ProductModel.init(
       type: DataTypes.FLOAT,
       allowNull: true,
     },
+    healthgoalids: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
     unit: {
       type: DataTypes.ENUM("kg", "g", "Pcs", "ml", "l"),
       defaultValue: "g",
@@ -147,6 +151,10 @@ ProductModel.init(
     gifttype: {
       type: DataTypes.ENUM("nuts", "pooja"),
       defaultValue: "nuts",
+    },
+    healthgoalids: {
+      type: DataTypes.JSON,
+      allowNull: true,
     },
   },
   {

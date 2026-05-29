@@ -14,6 +14,7 @@ import * as fs from "fs";
 import { sequelize } from "../../../connection.js";
 import { BusinessModel } from "../../model/business_model.js";
 import { CartModel } from "../../model/cart_model.js";
+import { Json } from "sequelize/lib/utils";
 
 export const addProductImage = asyncHandler(async (req, res) => {
   let file;
@@ -115,6 +116,18 @@ export const addProduct = asyncHandler(async (req, res) => {
 
       if (!existingProduct) throw new ApiError(404, "Product not found");
 
+      let parsedHealthGoalIds;
+      if (healthgoalids !== undefined) {
+        parsedHealthGoalIds = healthgoalids;
+        if (typeof healthgoalids === "string") {
+          try {
+            parsedHealthGoalIds = JSON.parse(healthgoalids);
+          } catch (e) {
+            parsedHealthGoalIds = [];
+          }
+        }
+      }
+
       await existingProduct.update({
         productimage:
           productimage !== undefined
@@ -153,20 +166,27 @@ export const addProduct = asyncHandler(async (req, res) => {
             ? carbohydrates
             : existingProduct.carbohydrates,
         country: country || "India",
+        healthgoalids: parsedHealthGoalIds !== undefined ? parsedHealthGoalIds : existingProduct.healthgoalids,
       });
 
-      if (
-        healthgoalids &&
-        healthgoalids.length > 0 &&
-        Array.isArray(healthgoalids)
-      ) {
-        const goalData = healthgoalids.map((goalid) => {
-          return {
-            product: product.productid,
-            goalid: goalid,
-          };
-        });
-        await ProductHealthGoal.bulkCreate(goalData);
+      if (healthgoalids !== undefined) {
+
+
+        if (Array.isArray(parsedHealthGoalIds)) {
+          await ProductHealthGoal.destroy({
+            where: { productid: existingProduct.productid },
+          });
+
+          if (parsedHealthGoalIds.length > 0) {
+            const goalData = parsedHealthGoalIds.map((goalid) => {
+              return {
+                productid: existingProduct.productid,
+                goalid: goalid,
+              };
+            });
+            await ProductHealthGoal.bulkCreate(goalData);
+          }
+        }
       }
 
       return res.status(200).json(
@@ -175,6 +195,18 @@ export const addProduct = asyncHandler(async (req, res) => {
           productid: existingProduct.productid,
         }),
       );
+    }
+
+    let parsedHealthGoalIds;
+    if (healthgoalids !== undefined) {
+      parsedHealthGoalIds = healthgoalids;
+      if (typeof healthgoalids === "string") {
+        try {
+          parsedHealthGoalIds = JSON.parse(healthgoalids);
+        } catch (e) {
+          parsedHealthGoalIds = [];
+        }
+      }
     }
 
     const product = await ProductModel.create({
@@ -205,7 +237,24 @@ export const addProduct = asyncHandler(async (req, res) => {
       fat: fat !== undefined ? fat : 0.0,
       carbohydrates: carbohydrates !== undefined ? carbohydrates : 0.0,
       country: country || "India",
+      healthgoalids: parsedHealthGoalIds !== undefined ? parsedHealthGoalIds : null,
     });
+
+    if (healthgoalids !== undefined) {
+
+      if (
+        Array.isArray(parsedHealthGoalIds) &&
+        parsedHealthGoalIds.length > 0
+      ) {
+        const goalData = parsedHealthGoalIds.map((goalid) => {
+          return {
+            productid: product.productid,
+            goalid: goalid,
+          };
+        });
+        await ProductHealthGoal.bulkCreate(goalData);
+      }
+    }
 
     return res.status(200).json(
       new ApiResponse(200, {
@@ -262,6 +311,18 @@ export const updateProduct = asyncHandler(async (req, res) => {
     let finalImage =
       productimage !== undefined ? productimage : existingProduct.productimage;
 
+    let parsedHealthGoalIds;
+    if (healthgoalids !== undefined) {
+      parsedHealthGoalIds = healthgoalids;
+      if (typeof healthgoalids === "string") {
+        try {
+          parsedHealthGoalIds = JSON.parse(healthgoalids);
+        } catch (e) {
+          parsedHealthGoalIds = [];
+        }
+      }
+    }
+
     await existingProduct.update({
       productimage: finalImage,
       productname: productname?.trim() || existingProduct.productname,
@@ -304,20 +365,26 @@ export const updateProduct = asyncHandler(async (req, res) => {
           ? carbohydrates
           : existingProduct.carbohydrates,
       country: country !== undefined ? country : existingProduct.country,
+      healthgoalids: parsedHealthGoalIds !== undefined ? parsedHealthGoalIds : existingProduct.healthgoalids,
     });
 
-    if (
-      healthgoalids &&
-      healthgoalids.length > 0 &&
-      Array.isArray(healthgoalids)
-    ) {
-      const goalData = healthgoalids.map((goalid) => {
-        return {
-          product: existingProduct.productid,
-          goalid: goalid,
-        };
-      });
-      await ProductHealthGoal.bulkCreate(goalData);
+    if (healthgoalids !== undefined) {
+
+      if (Array.isArray(parsedHealthGoalIds)) {
+        await ProductHealthGoal.destroy({
+          where: { productid: existingProduct.productid },
+        });
+
+        if (parsedHealthGoalIds.length > 0) {
+          const goalData = parsedHealthGoalIds.map((goalid) => {
+            return {
+              productid: existingProduct.productid,
+              goalid: goalid,
+            };
+          });
+          await ProductHealthGoal.bulkCreate(goalData);
+        }
+      }
     }
 
     return res.status(200).json(
@@ -391,11 +458,13 @@ export const getAllProducts = asyncHandler(async (req, res) => {
 
         return {
           ...data,
+          healthgoalids:JSON.parse(data.healthgoalids),
           image1: productImages?.image1 ?? null,
           image2: productImages?.image2 ?? null,
           image3: productImages?.image3 ?? null,
           image4: productImages?.image4 ?? null,
           discount,
+          
         };
       }),
     );
@@ -1034,6 +1103,51 @@ export const getAllHealthGoals = asyncHandler(async (req, res) => {
   try {
     const goals = await HealthGoalsModel.findAll();
     return res.status(200).json(new ApiResponse(200, goals));
+  } catch (error) {
+    throw error;
+  }
+});
+
+export const getHealthGoalProducts = asyncHandler(async (req, res) => {
+  try {
+    const { goalid } = req.body;
+    if (!goalid) throw new ApiError(400, "Goal id is required");
+    const products = await ProductHealthGoal.findAll({
+      where: { goalid },
+    });
+
+    const updatedHealthGoalProducts = await Promise.all(
+      products.map(async (product) => {
+        const data = product.toJSON();
+        const productData = await ProductModel.findOne({
+          where: { productid: data.productid },
+        });
+        return {
+          ...data,
+          productname: productData?.productname,
+          productimage: productData?.productimage,
+          price: productData?.price,
+          sellingprice: productData?.sellingprice,
+          itemtype: productData?.itemtype,
+          categoryid: productData?.categoryid,
+          categoryname: productData?.categoryname,
+          subcategoryid: productData?.subcategoryid,
+          subcategoryname: productData?.subcategoryname,
+          brandname: productData?.brandname,
+          description: productData?.description,
+          price: productData?.price,
+          sellingprice: productData?.sellingprice,
+          weight: productData?.weight,
+          unit: productData?.unit,
+          isFavourite: productData?.isFavourite,
+          availablestock: productData?.availablestock,
+        };
+      }),
+    );
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, updatedHealthGoalProducts));
   } catch (error) {
     throw error;
   }
