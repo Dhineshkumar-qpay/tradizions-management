@@ -1,4 +1,4 @@
-import { Model } from "sequelize";
+import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../../connection.js";
 
 class MenuModel extends Model {}
@@ -14,9 +14,21 @@ MenuModel.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    userid: {
-      type: DataTypes.INTEGER,
+    menukey: {
+      type: DataTypes.STRING,
       allowNull: false,
+    },
+    parentid: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    icon: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    status: {
+      type: DataTypes.ENUM("active", "inactive"),
+      defaultValue: "active",
     },
   },
   {
@@ -27,4 +39,30 @@ MenuModel.init(
   },
 );
 
-export { MenuModel };
+class AdminMenuPermissions extends Model {}
+
+AdminMenuPermissions.init(
+  {
+    permissionid: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    menuid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    userid: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+  },
+  {
+    sequelize: sequelize,
+    tableName: "adminmenupermissions",
+    modelName: "AdminMenuPermissions",
+    timestamps: false,
+  },
+);
+
+export { MenuModel,AdminMenuPermissions };

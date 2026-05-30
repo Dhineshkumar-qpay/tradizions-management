@@ -39,7 +39,7 @@ AuthModel.init(
       allowNull: false,
     },
     role: {
-      type: DataTypes.ENUM("admin", "user"),
+      type: DataTypes.ENUM("admin", "user","merchant"),
       defaultValue: "user",
     },
   },

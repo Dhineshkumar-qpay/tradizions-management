@@ -6,12 +6,12 @@ import { upload } from "../../middleware/multer_middleware.js";
 const router = express.Router();
 
 router.post(
-  "/admin/add-banner",
+  "/banner/add-banner",
   verifyToken,
   upload.single("bannerimage"),
   addBanner,
 );
-router.post("/admin/delete-banner", verifyToken, deleteBanner);
-router.post("/admin/all-banners", getAllBanners);
+router.post("/banner/delete-banner", verifyToken, deleteBanner);
+router.post("/banner/all-banners", getAllBanners);
 
 export default router;

@@ -13,6 +13,7 @@ import ProductGiftRouter from "./src/admin/routes/product_gift_routes.js";
 import BannerRouter from "./src/admin/routes/banner_routes.js";
 import HomeRouter from "./src/admin/routes/home_routes.js";
 import ContactRouter from "./src/admin/routes/contact_routes.js";
+import MenuRouter from "./src/admin/routes/menu_routes.js";
 
 import AuthRouter from "./src/users/routes/authRoutes.js";
 import CartRouter from "./src/users/routes/cart_routes.js";
@@ -38,6 +39,7 @@ app.use("/api", CategoryRouter);
 app.use("/api", ProductGiftRouter);
 app.use("/api", BannerRouter);
 app.use("/api", ContactRouter);
+app.use("/api", MenuRouter);
 
 /* User Routes */
 app.use("/api", AuthRouter);

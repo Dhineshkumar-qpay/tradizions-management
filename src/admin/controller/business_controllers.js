@@ -14,10 +14,13 @@ import fs from "fs";
 import { sequelize } from "../../../connection.js";
 import { ProductModel } from "../../model/product_gift_model.js";
 import { AuthModel } from "../../model/auth_model.js";
+import { AdminMenuPermissions } from "../../model/menu_model.js";
 
 export const addBusiness = asyncHandler(async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
-    const { username, phone, businessname, description, email } = req.body;
+    const { username, phone, businessname, description, email, menuids } =
+      req.body;
 
     if (!username) {
       throw new ApiError(400, "Username is required");
@@ -48,16 +51,21 @@ export const addBusiness = asyncHandler(async (req, res) => {
     if (user) throw new ApiError(400, "User already exists with same phone");
 
     if (!user) {
-      user = await AuthModel.create({
-        username: username.trim(),
-        phone: phone.trim(),
-        role: "user",
-      });
+      user = await AuthModel.create(
+        {
+          username: username.trim(),
+          phone: phone.trim(),
+          email: email,
+          role: "user",
+        },
+        { transaction },
+      );
     }
 
     const existingBusiness = await BusinessModel.findOne({
       where: {
         userid: user.userid,
+        email: email,
         businessname,
       },
     });
@@ -66,23 +74,110 @@ export const addBusiness = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Business already exists");
     }
 
-    const business = await BusinessModel.create({
-      userid: user.userid,
-      username: username.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
-      businessname: businessname.trim(),
-      description: description.trim(),
-    });
+    const business = await BusinessModel.create(
+      {
+        userid: user.userid,
+        username: username.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        businessname: businessname.trim(),
+        description: description.trim(),
+      },
+      { transaction },
+    );
 
     if (!business) {
       throw new ApiError(500, "Business creation failed");
     }
 
+    // Save menus assigned to the user
+    if (menuids && Array.isArray(menuids) && menuids.length > 0) {
+      const menuPermissions = menuids.map((menuid) => ({
+        userid: user.userid,
+        menuid: menuid,
+      }));
+      await AdminMenuPermissions.bulkCreate(menuPermissions, { transaction });
+    }
+
+    await transaction.commit();
+
     return res
       .status(200)
       .json(new ApiResponse(200, "Business added successfully"));
   } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+});
+
+export const editBusiness = asyncHandler(async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { bid, username, phone, businessname, description, email, menuids } =
+      req.body;
+
+    if (!bid) {
+      throw new ApiError(400, "Business ID is required");
+    }
+
+    const business = await BusinessModel.findByPk(bid);
+
+    if (!business) {
+      throw new ApiError(404, "Business not found");
+    }
+
+    const user = await AuthModel.findOne({
+      where: { userid: business.userid },
+    });
+
+    // Update business details
+    await business.update(
+      {
+        username: username?.trim() || business.username,
+        phone: phone?.trim() || business.phone,
+        email: email?.trim() || business.email,
+        businessname: businessname?.trim() || business.businessname,
+        description: description?.trim() || business.description,
+      },
+      { transaction },
+    );
+
+    // Update user details if provided
+    if (user) {
+      await user.update(
+        {
+          username: username?.trim() || user.username,
+          phone: phone?.trim() || user.phone,
+        },
+        { transaction },
+      );
+    }
+
+    // Update menus if menuids are provided
+    if (menuids && Array.isArray(menuids)) {
+      // Delete existing permissions for this user
+      await AdminMenuPermissions.destroy({
+        where: { userid: business.userid },
+        transaction,
+      });
+
+      // Insert new permissions
+      if (menuids.length > 0) {
+        const menuPermissions = menuids.map((menuid) => ({
+          userid: business.userid,
+          menuid: menuid,
+        }));
+        await AdminMenuPermissions.bulkCreate(menuPermissions, { transaction });
+      }
+    }
+
+    await transaction.commit();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Business updated successfully"));
+  } catch (error) {
+    await transaction.rollback();
     throw error;
   }
 });
@@ -186,13 +281,32 @@ export const getTotalBusiness = asyncHandler(async (req, res) => {
         exclude: ["createdAt", "updatedAt"],
       },
     });
-    return res.status(200).json(new ApiResponse(200, totalBusiness));
+
+    const updatedBusiness = await Promise.all(
+      totalBusiness.map(async (business) => {
+        const children = await AdminMenuPermissions.findAll({
+          attributes: ["menuid"],
+          where: { userid: business.userid },
+        });
+
+        return {
+          bid: business.bid,
+          businessname: business.businessname,
+          username: business.username,
+          email:business.email,
+          description: business.description,
+          status: business.status,
+          phone: business.phone,
+          userid: business.userid,
+          children: children,
+        };
+      }),
+    );
+    return res.status(200).json(new ApiResponse(200, updatedBusiness));
   } catch (error) {
     throw error;
   }
 });
-
-
 
 /* ------------------ Business Onboard ------------------ */
 

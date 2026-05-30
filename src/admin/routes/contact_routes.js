@@ -1,4 +1,4 @@
-import { adminOnly, userOnly, verifyToken } from "../../middleware/auth_middleware.js";
+import { adminAndUser, adminOnly, userOnly, verifyToken } from "../../middleware/auth_middleware.js";
 import {
   activeAppReview,
   addAppReview,
@@ -25,7 +25,7 @@ router.post(
 router.post(
   "/contact/get-contacts",
   verifyToken,
-  adminOnly,
+  adminAndUser,
   getNormalContactUs,
 );
 
@@ -36,8 +36,8 @@ router.post(
   adminOnly,
   getAllAppReviews,
 );
-router.post("/review/delete-review", verifyToken, adminOnly, deleteAppReview);
-router.post("/review/active-review", verifyToken, adminOnly, activeAppReview);
+router.post("/review/delete-review", verifyToken, adminAndUser, deleteAppReview);
+router.post("/review/active-review", verifyToken, adminAndUser, activeAppReview);
 
 router.post("/review/add-review", verifyToken, userOnly, addAppReview);
 router.post("/review/get-user-reviews", getUserAppReviews);

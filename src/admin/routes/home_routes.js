@@ -1,4 +1,5 @@
 import {
+  adminAndUser,
   adminOnly,
   userOnly,
   verifyToken,
@@ -14,10 +15,17 @@ import {
 } from "../controller/home_controller.js";
 import express from "express";
 import { getAllProducts } from "../controller/product_gift_controller.js";
+import { upload, uploadJson } from "../../middleware/multer_middleware.js";
 
 const router = express.Router();
 
-router.post("/kural/addthinamorukural", verifyToken, addThinamoruKural);
+router.post(
+  "/kural/addthinamorukural",
+  verifyToken,
+  adminAndUser,
+  uploadJson.single("kurals"),
+  addThinamoruKural,
+);
 router.post("/kural/get-kural", getKural);
 
 router.post("/home/data-count", verifyToken, getMerchantDashboardCounts);
@@ -32,11 +40,6 @@ router.post(
   adminOnly,
   getSuperAdminDashboardData,
 );
-router.post(
-  "/admin/stock-counts",
-  verifyToken,
-  adminOnly,
-  getTotalStocksData,
-);
+router.post("/admin/stock-counts", verifyToken, adminOnly, getTotalStocksData);
 
 export default router;

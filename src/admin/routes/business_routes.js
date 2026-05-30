@@ -5,6 +5,7 @@ import {
   addBank,
   addBasicInfo,
   addBusiness,
+  editBusiness,
   addBusinessInfo,
   addKyc,
   deleteBusiness,
@@ -26,6 +27,7 @@ const router = express.Router();
 router.post("/admin/businesses", verifyToken, getTotalBusiness);
 
 router.post("/business/addbusiness", verifyToken, addBusiness);
+router.post("/business/editbusiness", verifyToken, editBusiness);
 router.post(
   "/business/active-business",
   verifyToken,

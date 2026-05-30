@@ -13,23 +13,44 @@ import {
 } from "../../model/product_gift_model.js";
 import { type } from "os";
 import { Op } from "sequelize";
+import fs from "fs";
 import { OrderItemModel } from "../../model/order_model.js";
 import { BusinessModel } from "../../model/business_model.js";
 import { AuthModel } from "../../model/auth_model.js";
 
+// export const addThinamoruKural = asyncHandler(async (req, res) => {
+//   try {
+//     const { kuralList } = req.body;
+
+//     if (!Array.isArray(kuralList)) {
+//       throw new ApiError(400, "Kural list is required");
+//     }
+
+//     const result = ThinamOruKuralModel.bulkCreate(kuralList, {
+//       validate: true,
+//       ignoreDuplicates: true,
+//     });
+
+//     return res
+//       .status(200)
+//       .json(new ApiResponse(200, "Kural Added Successfully"));
+//   } catch (error) {
+//     throw error;
+//   }
+// });
+
 export const addThinamoruKural = asyncHandler(async (req, res) => {
   try {
-    const { kuralList } = req.body;
-
-    if (!Array.isArray(kuralList)) {
-      throw new ApiError(400, "Kural list is required");
+    if (!req.file) {
+      throw new ApiError(400, "Json file is required");
     }
-
-    const result = ThinamOruKuralModel.bulkCreate(kuralList, {
+    const filePath = req.file.path;
+    const fileData = fs.readFileSync(filePath, "utf-8");
+    const kurals = JSON.parse(fileData);
+    const result = ThinamOruKuralModel.bulkCreate(kurals, {
       validate: true,
       ignoreDuplicates: true,
     });
-
     return res
       .status(200)
       .json(new ApiResponse(200, "Kural Added Successfully"));

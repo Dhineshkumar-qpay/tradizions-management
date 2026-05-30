@@ -1,4 +1,4 @@
-import { adminOnly, verifyToken } from "../../middleware/auth_middleware.js";
+import { adminAndUser, adminOnly, verifyToken } from "../../middleware/auth_middleware.js";
 import {
   getAllUsers,
   sendAdminOTP,
@@ -9,6 +9,6 @@ import express from "express";
 const router = express.Router();
 router.post("/admin/send-otp", sendAdminOTP);
 router.post("/admin/verify-otp", verifyAdminOTP);
-router.post("/admin/getallusers", verifyToken, adminOnly, getAllUsers);
+router.post("/admin/getallusers", verifyToken, adminAndUser, getAllUsers);
 
 export default router;

@@ -5,7 +5,8 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import { current } from "../../../config/config.js";
 import otpGenerator from "otp-generator";
 import jwt from "jsonwebtoken";
-import { where } from "sequelize";
+import { where, Op } from "sequelize";
+import { AdminMenuPermissions, MenuModel } from "../../model/menu_model.js";
 
 export const sendOTP = asyncHandler(async (req, res) => {
   try {
@@ -83,15 +84,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     );
 
     return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          userid: user.userid,
-          role: user.role,
-          token: token,
-        },
-        "User login successful",
-      ),
+      new ApiResponse(200, {
+        userid: user.userid,
+        token: token,
+      }),
     );
   } catch (error) {
     throw error;
@@ -179,3 +175,5 @@ export const addToNewsletter = asyncHandler(async (req, res) => {
     throw error;
   }
 });
+
+ 

@@ -166,12 +166,13 @@ export const addProduct = asyncHandler(async (req, res) => {
             ? carbohydrates
             : existingProduct.carbohydrates,
         country: country || "India",
-        healthgoalids: parsedHealthGoalIds !== undefined ? parsedHealthGoalIds : existingProduct.healthgoalids,
+        healthgoalids:
+          parsedHealthGoalIds !== undefined
+            ? parsedHealthGoalIds
+            : existingProduct.healthgoalids,
       });
 
       if (healthgoalids !== undefined) {
-
-
         if (Array.isArray(parsedHealthGoalIds)) {
           await ProductHealthGoal.destroy({
             where: { productid: existingProduct.productid },
@@ -237,11 +238,11 @@ export const addProduct = asyncHandler(async (req, res) => {
       fat: fat !== undefined ? fat : 0.0,
       carbohydrates: carbohydrates !== undefined ? carbohydrates : 0.0,
       country: country || "India",
-      healthgoalids: parsedHealthGoalIds !== undefined ? parsedHealthGoalIds : null,
+      healthgoalids:
+        parsedHealthGoalIds !== undefined ? parsedHealthGoalIds : null,
     });
 
     if (healthgoalids !== undefined) {
-
       if (
         Array.isArray(parsedHealthGoalIds) &&
         parsedHealthGoalIds.length > 0
@@ -365,11 +366,13 @@ export const updateProduct = asyncHandler(async (req, res) => {
           ? carbohydrates
           : existingProduct.carbohydrates,
       country: country !== undefined ? country : existingProduct.country,
-      healthgoalids: parsedHealthGoalIds !== undefined ? parsedHealthGoalIds : existingProduct.healthgoalids,
+      healthgoalids:
+        parsedHealthGoalIds !== undefined
+          ? parsedHealthGoalIds
+          : existingProduct.healthgoalids,
     });
 
     if (healthgoalids !== undefined) {
-
       if (Array.isArray(parsedHealthGoalIds)) {
         await ProductHealthGoal.destroy({
           where: { productid: existingProduct.productid },
@@ -458,13 +461,12 @@ export const getAllProducts = asyncHandler(async (req, res) => {
 
         return {
           ...data,
-          healthgoalids:JSON.parse(data.healthgoalids),
+          healthgoalids: JSON.parse(data.healthgoalids),
           image1: productImages?.image1 ?? null,
           image2: productImages?.image2 ?? null,
           image3: productImages?.image3 ?? null,
           image4: productImages?.image4 ?? null,
           discount,
-          
         };
       }),
     );
@@ -1084,12 +1086,15 @@ export const addHealthGoal = asyncHandler(async (req, res) => {
 export const deleteGoal = asyncHandler(async (req, res) => {
   try {
     const { goalid } = req.body;
+    if (!goalid) throw new ApiError(400, "Goalid is required");
 
-    const goal = await HealthGoalsModel.destroy({
-      where: {
-        goalid: goalid,
-      },
-    });
+    const goal = await HealthGoalsModel.findByPk(goalid);
+
+    if (!goal) {
+      throw new ApiError(404, "Health goal not found");
+    }
+
+    await goal.destroy();
 
     return res
       .status(200)

@@ -1,5 +1,5 @@
 import express from "express";
-import { adminOnly, verifyToken } from "../../middleware/auth_middleware.js";
+import { adminAndUser, adminOnly, verifyToken } from "../../middleware/auth_middleware.js";
 import {
   addOrUpdateProductImages,
   addProduct,
@@ -87,13 +87,13 @@ router.post("/product/all-ratings", verifyToken, getAllProductRatings);
 router.post(
   "/goal/addhealth-goal",
   verifyToken,
-  adminOnly,
+  adminAndUser,
   upload.single("goalimage"),
   addHealthGoal,
 );
 
-router.post("/goal/delete-goal", verifyToken, adminOnly, deleteGoal);
-router.post("/goal/gethealth-goals", verifyToken, getAllHealthGoals);
+router.post("/goal/delete-goal", verifyToken, adminAndUser, deleteGoal);
+router.post("/goal/gethealth-goals", verifyToken,adminAndUser, getAllHealthGoals);
 router.post("/product/health-goal-products", verifyToken, getHealthGoalProducts);
 
 export default router;
