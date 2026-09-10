@@ -16,7 +16,7 @@ AuthModel.init(
     },
     email: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       unique: true,
     },
     otp: {

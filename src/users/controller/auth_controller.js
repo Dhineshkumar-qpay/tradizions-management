@@ -6,29 +6,37 @@ import { current } from "../../../config/config.js";
 import otpGenerator from "otp-generator";
 import jwt from "jsonwebtoken";
 import { where, Op } from "sequelize";
-import { AdminMenuPermissions, MenuModel } from "../../model/menu_model.js";
+import { sendOTPEmail } from "../../../config/mailer.js";
+
 
 
 export const sendOTP = asyncHandler(async (req, res) => {
   try {
-    const { phone, email } = req.body;
+    const { email } = req.body;
 
-    if (!phone && !email) {
-      throw new ApiError(400, "Phone or email is required");
+    if (!email) {
+      throw new ApiError(400, "Email is required");
     }
 
-    const isAdmin =
-      phone === "9876543210" || email === "tradizions@gmail.com";
+    const normalizedEmail = email.trim().toLowerCase();
 
-    // For testing, use OTP 540148
-    const otp = "540148";
-    const roleToAssign = isAdmin ? "admin" : "user";
+    const ADMIN_EMAIL = "admin@gmail.com";
+    const ADMIN_OTP = "540148";
+
+    const isAdmin = normalizedEmail === ADMIN_EMAIL;
+
+    // Admin -> fixed OTP
+    // User -> random OTP
+    const otp = isAdmin
+      ? ADMIN_OTP
+      : Math.floor(100000 + Math.random() * 900000).toString();
+
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
+    // Find existing user
     let user = await AuthModel.findOne({
       where: {
-        ...(phone ? { phone } : {}),
-        ...(email ? { email } : {}),
+        email: normalizedEmail,
       },
     });
 
@@ -36,23 +44,19 @@ export const sendOTP = asyncHandler(async (req, res) => {
       await user.update({
         otp,
         otp_expires_at: otpExpiresAt,
-        role: isAdmin ? "admin" : user.role,
+        ...(isAdmin ? { role: "admin" } : { role: user.role }),
       });
     } else {
       user = await AuthModel.create({
-        phone: phone || null,
-        email: email || null,
+        email: normalizedEmail,
         otp,
         otp_expires_at: otpExpiresAt,
-        role: roleToAssign,
+        role: isAdmin ? "admin" : "user",
       });
     }
 
-    const emailToSend = email || (isAdmin ? "tradizions@gmail.com" : user.email);
-
-    if (emailToSend) {
-      const { sendOTPEmail } = await import("../../../config/mailer.js");
-      await sendOTPEmail(emailToSend, otp);
+    if (!isAdmin) {
+      await sendOTPEmail(normalizedEmail, otp);
     }
 
     return res
@@ -65,27 +69,26 @@ export const sendOTP = asyncHandler(async (req, res) => {
 
 
 
-
 export const verifyOTP = asyncHandler(async (req, res) => {
   try {
-    const { phone, otp } = req.body;
+    const { email, otp } = req.body;
 
-    if (!phone || !otp) {
-      throw new ApiError(400, "Phone and OTP are required");
+    if (!email || !otp) {
+      throw new ApiError(400, "Email and OTP are required");
     }
+
+    const normalizedEmail = email.trim().toLowerCase();
 
     const user = await AuthModel.findOne({
       where: {
-        phone: phone,
-        role: {
-          [Op.or]: ["user", "merchant", "admin"],
-        },
+        email: normalizedEmail,
       },
     });
 
     if (!user) {
       throw new ApiError(404, "User not found");
     }
+
     if (user.status === "inactive") {
       throw new ApiError(
         403,
@@ -93,19 +96,26 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       );
     }
 
+    // Check OTP
     if (!user.otp || user.otp !== String(otp)) {
       throw new ApiError(400, "Invalid OTP");
     }
 
-    if (user.otp_expires_at && new Date() > new Date(user.otp_expires_at)) {
+    // Check OTP expiry
+    if (
+      user.otp_expires_at &&
+      new Date() > new Date(user.otp_expires_at)
+    ) {
       throw new ApiError(400, "OTP has expired");
     }
 
+    // Clear OTP after successful verification
     await user.update({
       otp: null,
       otp_expires_at: null,
     });
 
+    // Create JWT token
     const token = jwt.sign(
       {
         userid: user.userid,
@@ -128,6 +138,9 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     throw error;
   }
 });
+
+
+
 
 export const getProfile = asyncHandler(async (req, res) => {
   const userid = req.user?.userid;
