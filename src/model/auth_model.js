@@ -1,7 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../../connection.js";
 
-class AuthModel extends Model {}
+class AuthModel extends Model { }
 
 AuthModel.init(
   {
@@ -16,7 +16,7 @@ AuthModel.init(
     },
     email: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
       unique: true,
     },
     otp: {
@@ -36,13 +36,13 @@ AuthModel.init(
     },
     phone: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     role: {
-      type: DataTypes.ENUM("admin", "user","merchant"),
+      type: DataTypes.ENUM("admin", "user", "merchant"),
       defaultValue: "user",
     },
-    status:{
+    status: {
       type: DataTypes.ENUM("active", "inactive"),
       defaultValue: "active",
     }
@@ -55,7 +55,7 @@ AuthModel.init(
   },
 );
 
-class NewsLetterModel extends Model {}
+class NewsLetterModel extends Model { }
 
 NewsLetterModel.init(
   {
