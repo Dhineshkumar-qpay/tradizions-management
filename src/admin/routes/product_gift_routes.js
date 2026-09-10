@@ -1,0 +1,133 @@
+import express from "express";
+import {
+  adminAndUser,
+  adminOnly,
+  verifyToken,
+} from "../../middleware/auth_middleware.js";
+import {
+  addOrUpdateProductImages,
+  addProduct,
+  deleteProduct,
+  deleteProductImage,
+  getAllProducts,
+  updateProduct,
+  addGift,
+  editGift,
+  deleteGift,
+  getMerchantGifts,
+  addGiftImage,
+  addProductImage,
+  addProductRating,
+  deleteRating,
+  getAllProductRatings,
+  ratingStatusUpdate,
+  addGiftCard,
+  getGiftCards,
+  deleteGiftCard,
+  getCorporateGiftProducts,
+  addHealthGoal,
+  deleteGoal,
+  getAllHealthGoals,
+  getHealthGoalProducts,
+  uploadUserGiftCard,
+  getAllBusinessProducts,
+  addGiftPack,
+  getGiftPacks,
+  getAllGiftPacks,
+  deleteGiftPack,
+  createCustomGift,
+  getCustomGifts,
+} from "../controller/product_gift_controller.js";
+import { upload } from "../../middleware/multer_middleware.js";
+
+const router = express.Router();
+
+router.post("/product/corporate-products", getCorporateGiftProducts);
+
+router.post(
+  "/business/upload-product-image",
+  verifyToken,
+  upload.single("productimage"),
+  addProductImage,
+);
+
+router.post("/business/addproduct", verifyToken, addProduct);
+router.post("/business/updateproduct", verifyToken, updateProduct);
+
+router.post("/business/deleteproduct", verifyToken, deleteProduct);
+router.post("/business/getproducts", getAllProducts);
+router.post("/business/getallbusinessproducts", getAllBusinessProducts);
+
+router.post(
+  "/product/add-gift-card",
+  verifyToken,
+  upload.single("cardimage"),
+  addGiftCard,
+);
+router.post("/product/get-gift-cards", getGiftCards);
+router.post("/product/delete-gift-card", verifyToken, deleteGiftCard);
+router.post(
+  "/product/upload-gift-card",
+  verifyToken,
+  upload.single("cardimage"),
+  uploadUserGiftCard,
+);
+
+router.post(
+  "/business/upload-product-images",
+  verifyToken,
+  upload.fields([
+    { name: "image1", maxCount: 1 },
+    { name: "image2", maxCount: 1 },
+    { name: "image3", maxCount: 1 },
+    { name: "image4", maxCount: 1 },
+  ]),
+  addOrUpdateProductImages,
+);
+
+router.post("/business/delete-product-image", verifyToken, deleteProductImage);
+
+router.post(
+  "/business/upload-gift-image",
+  verifyToken,
+  upload.single("giftimage"),
+  addGiftImage,
+);
+router.post("/business/addgift", verifyToken, addGift);
+router.post("/business/editgift", verifyToken, editGift);
+router.post("/business/deletegift", verifyToken, deleteGift);
+router.post("/business/getgifts", verifyToken, getMerchantGifts);
+
+router.post("/product/add-update-rating", verifyToken, addProductRating);
+router.post("/product/delete-rating", verifyToken, deleteRating);
+router.post("/product/rating-status", verifyToken, ratingStatusUpdate);
+router.post("/product/all-ratings", verifyToken, getAllProductRatings);
+
+router.post(
+  "/goal/addhealth-goal",
+  verifyToken,
+  adminAndUser,
+  upload.single("goalimage"),
+  addHealthGoal,
+);
+
+router.post("/goal/delete-goal", verifyToken, adminAndUser, deleteGoal);
+router.post("/goal/gethealth-goals", getAllHealthGoals);
+
+router.post("/product/health-goal-products", getHealthGoalProducts);
+
+router.post(
+  "/product/add-gift-pack",
+  verifyToken,
+  upload.single("giftpackimage"),
+  addGiftPack,
+);
+router.post("/product/get-gift-packs", verifyToken, getGiftPacks);
+router.post("/product/getallgiftpacks", getAllGiftPacks);
+router.post("/product/delete-gift-pack", verifyToken, deleteGiftPack);
+
+
+router.post("/customgift/create-custom-gift", verifyToken, createCustomGift);
+router.post("/customgift/get-custom-gifts", verifyToken, getCustomGifts);
+
+export default router;

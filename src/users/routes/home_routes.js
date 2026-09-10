@@ -1,0 +1,27 @@
+import { verifyToken } from "../../middleware/auth_middleware.js";
+import {
+  getAllProducts,
+  getProductDetail,
+  getAllGifts,
+  giftDetails,
+  getHomeProducts,
+  searchProducts,
+  getFeaturedProducts,
+  getNewArrivalsProducts,
+} from "../controller/home_controller.js";
+import express from "express";
+
+const router = express.Router();
+
+router.post("/product/getallproducts", getAllProducts);
+router.post("/product/product-detail", getProductDetail);
+
+router.post("/product/gifts", getAllGifts);
+router.post("/product/gift-detail", giftDetails);
+
+router.post("/product/get-home-products", getHomeProducts);
+router.post("/product/search", searchProducts);
+router.post("/product/featured", getFeaturedProducts);
+router.post("/product/new-arrivals", getNewArrivalsProducts);
+
+export default router;
