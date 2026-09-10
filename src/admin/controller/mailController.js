@@ -1,4 +1,18 @@
-import { transporter } from "../../../config/mailConfig.js";
+import Mailgun from "mailgun.js";
+import formData from "form-data";
+
+const mailgun = new Mailgun(formData);
+let mgClient = null;
+
+const getMgClient = () => {
+  if (!mgClient) {
+    mgClient = mailgun.client({
+      username: "api",
+      key: process.env.MAILGUN_API_KEY,
+    });
+  }
+  return mgClient;
+};
 
 export const normalProductsOrder = (ordersData) => {
   const renderAddress = (addr) => {
@@ -449,18 +463,25 @@ export const monthlyProductsOrders = (ordersData) => {
 export const sendEmail = async (to, subject, text, htmlContent) => {
   try {
     const senderMail = process.env.SMTP_MAIL || "dinesh@vidyutinfo.in";
-    const mailOptions = {
-      from: `"Tradizions" <${senderMail}>`,
+    const domain = process.env.MAILGUN_DOMAIN;
+
+    if (!domain || domain === "your-mailgun-domain.com") {
+      console.warn("Mailgun domain is not configured properly in .env");
+    }
+
+    const mg = getMgClient();
+
+    const messageData = {
+      from: `Tradizions <${senderMail}>`,
       to: to || senderMail,
       subject: subject || "Notification from Tradizions",
       text: text || "Notification",
-      replyTo: senderMail,
       html: htmlContent ? htmlContent : normalProductsOrder({}).html,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Message sent:", info.messageId);
-    return info;
+    const info = await mg.messages.create(domain, messageData);
+    console.log("Message sent via Mailgun:", info.id);
+    return { messageId: info.id, response: info.message };
   } catch (error) {
     console.error("Error sending email in sendEmail function:", error);
     return null;
@@ -479,6 +500,9 @@ export const handleSendEmail = async (req, res) => {
 
   try {
     const info = await sendEmail(to, subject, text);
+    if (!info) {
+      throw new Error("Failed to send email");
+    }
     res.status(200).json({
       success: true,
       message: "Email sent successfully",
@@ -493,3 +517,5 @@ export const handleSendEmail = async (req, res) => {
     });
   }
 };
+
+

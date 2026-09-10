@@ -8,43 +8,63 @@ import jwt from "jsonwebtoken";
 import { where, Op } from "sequelize";
 import { AdminMenuPermissions, MenuModel } from "../../model/menu_model.js";
 
+
 export const sendOTP = asyncHandler(async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone, email } = req.body;
 
-    if (!phone) {
-      throw new ApiError(400, "Mobile number is required");
+    if (!phone && !email) {
+      throw new ApiError(400, "Phone or email is required");
     }
 
-    const isAdmin = phone === "9876543210";
-    const otp = isAdmin ? "540148" : "567543";
+    const isAdmin =
+      phone === "9876543210" || email === "tradizions@gmail.com";
+
+    // For testing, use OTP 540148
+    const otp = "540148";
     const roleToAssign = isAdmin ? "admin" : "user";
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     let user = await AuthModel.findOne({
-      where: { phone: phone },
+      where: {
+        ...(phone ? { phone } : {}),
+        ...(email ? { email } : {}),
+      },
     });
 
     if (user) {
       await user.update({
-        otp: otp,
+        otp,
         otp_expires_at: otpExpiresAt,
         role: isAdmin ? "admin" : user.role,
       });
     } else {
       user = await AuthModel.create({
-        phone: phone,
-        otp: otp,
+        phone: phone || null,
+        email: email || null,
+        otp,
         otp_expires_at: otpExpiresAt,
         role: roleToAssign,
       });
     }
 
-    return res.status(200).json(new ApiResponse(200, "OTP sent successfully"));
+    const emailToSend = email || (isAdmin ? "tradizions@gmail.com" : user.email);
+
+    if (emailToSend) {
+      const { sendOTPEmail } = await import("../../../config/mailer.js");
+      await sendOTPEmail(emailToSend, otp);
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "OTP sent successfully"));
   } catch (error) {
     throw error;
   }
 });
+
+
+
 
 export const verifyOTP = asyncHandler(async (req, res) => {
   try {
@@ -190,3 +210,4 @@ export const addToNewsletter = asyncHandler(async (req, res) => {
     throw error;
   }
 });
+

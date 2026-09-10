@@ -1,23 +1,34 @@
-import nodemailer from "nodemailer";
+import Mailgun from "mailgun.js";
+import formData from "form-data";
 import dotenv from "dotenv";
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  auth: {
-    user: process.env.BREVO_LOGIN,
-    pass: process.env.BREVO_SMTP_KEY,
-  },
-});
+const mailgun = new Mailgun(formData);
+let mgClient = null;
+
+const getMgClient = () => {
+  if (!mgClient) {
+    mgClient = mailgun.client({
+      username: "api",
+      key: process.env.MAILGUN_API_KEY,
+    });
+  }
+  return mgClient;
+};
 
 export const sendOTPEmail = async (email, otp) => {
   try {
-    const mailOptions = {
-      from: `"${process.env.SENDER_NAME || "Tradizions"}" <${process.env.SENDER_EMAIL}>`,
-      to: email,
-      subject: "Your Verification Code",
-      html: `
+    const senderMail = process.env.SENDER_EMAIL || process.env.SMTP_MAIL || "dinesh@vidyutinfo.in";
+    const senderName = process.env.SENDER_NAME || "Tradizions";
+    const domain = process.env.MAILGUN_DOMAIN;
+
+    if (!domain || domain === "your-mailgun-domain.com") {
+      console.warn("Mailgun domain is not configured properly in .env");
+    }
+
+    const mg = getMgClient();
+
+    const htmlContent = `
 <div style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #f6f8fb; padding: 40px 0;">
   <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
     
@@ -57,14 +68,20 @@ export const sendOTPEmail = async (email, otp) => {
 
   </div>
 </div>
-`,
+`;
+
+    const messageData = {
+      from: `"${senderName}" <${senderMail}>`,
+      to: email,
+      subject: "Your Verification Code",
+      html: htmlContent,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully via Nodemailer:", info.messageId);
+    const info = await mg.messages.create(domain, messageData);
+    console.log("Email sent successfully via Mailgun:", info.id);
     return true;
   } catch (error) {
-    console.error("Nodemailer Error Details:", error.message);
+    console.error("Mailgun Error Details:", error.message);
     throw error;
   }
 };

@@ -2,30 +2,13 @@ import { DataTypes, Sequelize } from "sequelize";
 import { current, mode } from "./config/config.js";
 import mysql2 from "mysql2";
 
-// export const sequelize = new Sequelize(
-//   current.database.db_name,
-//   current.database.username,
-//   current.database.password,
-//   {
-//     host: current.database.host,
-//     port: current.database.port,
-//     dialect: "mysql",
-//     dialectModule: mysql2,
-//     timezone: "+05:30",
-//     logging: false,
-//     dialectOptions: {
-//       connectTimeout: 20000,
-//     },
-//   },
-// );
-
 export const sequelize = new Sequelize(
-  "millets_db",
-  "millets_admin",
-  "xdE2Rq2yq4A24bPz",
+  current.database.db_name,
+  current.database.username,
+  current.database.password,
   {
-    host: "184.168.98.226",
-    port: "3306",
+    host: current.database.host,
+    port: current.database.port,
     dialect: "mysql",
     dialectModule: mysql2,
     timezone: "+05:30",
@@ -35,6 +18,23 @@ export const sequelize = new Sequelize(
     },
   },
 );
+
+// export const sequelize = new Sequelize(
+//   "millets_db",
+//   "millets_admin",
+//   "xdE2Rq2yq4A24bPz",
+//   {
+//     host: "184.168.98.226",
+//     port: "3306",
+//     dialect: "mysql",
+//     dialectModule: mysql2,
+//     timezone: "+05:30",
+//     logging: false,
+//     dialectOptions: {
+//       connectTimeout: 20000,
+//     },
+//   },
+// );
 
 export const connectDB = async () => {
   try {
